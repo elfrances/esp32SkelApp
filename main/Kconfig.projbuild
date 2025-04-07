@@ -1,0 +1,61 @@
+menu "Skeletal App Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+    
+    config RGB_LED_GPIO
+        int "RGB LED GPIO number"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 5 if IDF_TARGET_ESP32
+        default 8 if IDF_TARGET_ESP32C3
+        default 48 if IDF_TARGET_ESP32S3
+        default 8
+        help
+            GPIO pin number used to control the RGB LED.
+
+    config BOOT_BUTTON_GPIO
+        int "BOOT button GPIO number"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+        default 0 if IDF_TARGET_ESP32
+        default 9 if IDF_TARGET_ESP32C3
+        default 0 if IDF_TARGET_ESP32S3
+        default 9
+        help
+            GPIO pin number used by the PCB's BOOT button.
+
+    menu "Optional Features"
+    
+		config BLE_PERIPHERAL
+			bool "BLE Peripheral"
+			default y
+			help
+				When enabled the firmware includes BLE peripheral functionality
+				to allow a mobile app to connect to the device.
+    
+		config ESPTOUCH
+			bool "ESPTOUCH"
+			default y
+			help
+				Adds support for ESPTOUCH (SmartConfig) to auto configure the 
+				WiFi credentials using the ESPOUTCH mobile app.
+				
+		config WIFI_PASSWD
+			string "WiFi Password"
+			help
+				Hardcoded WiFi password.
+				    
+		config WIFI_SSID
+			string "WiFi SSID"
+			help
+				Hardcoded WiFi SSID.
+				    
+		config WPS
+			bool "WiFi Protected Setup (WPS)"
+			default y
+			help
+				Adds support for WiFi Protected Setup (WPS) to auto configure the 
+				WiFi credentials using the WiFi router.
+    
+    endmenu
+    
+endmenu
+

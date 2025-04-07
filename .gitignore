@@ -64,7 +64,6 @@ build/*
 
 # ESP-IDF files
 dependencies.lock
-sdkconfig
 sdkconfig.old
 /build/
 /managed_components/
