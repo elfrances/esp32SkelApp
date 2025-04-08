@@ -1,0 +1,8 @@
+## IDF Component Manager Manifest File
+dependencies:
+  ## Required IDF version
+  idf: ">=5.0"
+  
+  ## RGB LED
+  espressif/led_strip: "^2.4.1"
+  

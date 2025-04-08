@@ -1,51 +1,61 @@
-/*
- * SPDX-FileCopyrightText: 2010-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: CC0-1.0
- */
+#include "esp32.h"
+#include "led.h"
+#include "mlog.h"
+#include "nvram.h"
 
-#include <stdio.h>
-#include <inttypes.h>
-#include "sdkconfig.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_chip_info.h"
-#include "esp_flash.h"
+AppConfigInfo appConfigInfo;
 
 void app_main(void)
 {
-    printf("Hello world!\n");
+    esp_err_t err;
 
-    /* Print chip information */
-    esp_chip_info_t chip_info;
-    uint32_t flash_size;
-    esp_chip_info(&chip_info);
-    printf("This is %s chip with %d CPU core(s), %s%s%s%s, ",
-           CONFIG_IDF_TARGET,
-           chip_info.cores,
-           (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi/" : "",
-           (chip_info.features & CHIP_FEATURE_BT) ? "BT" : "",
-           (chip_info.features & CHIP_FEATURE_BLE) ? "BLE" : "",
-           (chip_info.features & CHIP_FEATURE_IEEE802154) ? ", 802.15.4 (Zigbee/Thread)" : "");
+#if 1
+    // On the ESP32-S3 DevKit the USB port drops whenever
+    // the board is reset. This delay allows the user to
+    // reconnect the terminal emulator to the UART port in
+    // order to see the early initialization log messages.
+    vTaskDelay(pdMS_TO_TICKS(5000));
+#endif
 
-    unsigned major_rev = chip_info.revision / 100;
-    unsigned minor_rev = chip_info.revision % 100;
-    printf("silicon revision v%d.%d, ", major_rev, minor_rev);
-    if(esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
-        printf("Get flash size failed");
+    // Initialize the message logging API. Notice that at
+    // this point NTP has not set the correct date & time
+    // yet, therefore the timestamps will be based on the
+    // Epoch (1970-01-01 at 00:00:00) ...
+    if (msgLogInit(false) != 0) {
+        printf("SPONG! Failed to init msgLog API!\n");
         return;
     }
 
-    printf("%" PRIu32 "MB %s flash\n", flash_size / (uint32_t)(1024 * 1024),
-           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-
-    printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
-
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    // Initialize the LED API
+    if (ledInit() != 0) {
+        mlog(fatal, "ledInit");
     }
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
+
+    err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // 1.OTA app partition table has a smaller NVS partition size than the non-OTA
+        // partition table. This size mismatch may cause NVS initialization to fail.
+        // 2.NVS partition contains data in new format and cannot be recognized by this version of code.
+        // If this happens, we erase NVS partition and initialize NVS again.
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
+
+    // Initialize the TCP/IP network stack
+    ESP_ERROR_CHECK(esp_netif_init());
+
+    // Create the default event loop handler
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    // Init NVRAM API
+    if (nvramOpen() != 0) {
+        mlog(fatal, "nvramOpen!");
+    }
+
+    // Read the app's config info from NVRAM
+    if (nvramRead(&appConfigInfo) != 0) {
+        mlog(fatal, "Can't read app's config info!");
+    }
+
 }

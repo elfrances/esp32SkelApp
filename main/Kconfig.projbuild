@@ -11,6 +11,13 @@ menu "Skeletal App Configuration"
         default 8
         help
             GPIO pin number used to control the RGB LED.
+            
+    config RGB_LED_TASK_PRIO
+    	int "RGB LED task priority"
+    	range 0 25
+    	default 0
+    	help
+    		The priority of the task that manages the RGB LED.
 
     config BOOT_BUTTON_GPIO
         int "BOOT button GPIO number"
@@ -38,22 +45,22 @@ menu "Skeletal App Configuration"
 				Adds support for ESPTOUCH (SmartConfig) to auto configure the 
 				WiFi credentials using the ESPOUTCH mobile app.
 				
-		config WIFI_PASSWD
-			string "WiFi Password"
-			help
-				Hardcoded WiFi password.
-				    
-		config WIFI_SSID
-			string "WiFi SSID"
-			help
-				Hardcoded WiFi SSID.
-				    
 		config WPS
 			bool "WiFi Protected Setup (WPS)"
 			default y
 			help
 				Adds support for WiFi Protected Setup (WPS) to auto configure the 
 				WiFi credentials using the WiFi router.
+				
+		config WIFI_SSID
+			string "WiFi SSID"
+			help
+				Hardcoded WiFi SSID.
+				
+		config WIFI_PASSWD
+			string "WiFi Password"
+			help
+				Hardcoded WiFi password.
     
     endmenu
     
