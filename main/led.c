@@ -6,7 +6,7 @@
 #include "led.h"
 #include "mlog.h"
 
-#define RGB_LED_GPIO    CONFIG_RGB_LED_GPIO
+#ifdef CONFIG_RGB_LED
 
 typedef struct LedMsg {
     uint8_t mode;
@@ -188,3 +188,4 @@ int ledInit(void)
     return 0;
 }
 
+#endif  // CONFIG_RGB_LED

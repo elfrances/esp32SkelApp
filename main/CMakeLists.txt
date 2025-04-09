@@ -1,4 +1,5 @@
-set(srcs led.c
+set(srcs ble.c
+         led.c
          main.c
          mlog.c
          nvram.c)

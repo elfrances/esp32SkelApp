@@ -1,45 +1,96 @@
 menu "Skeletal App Configuration"
 
     orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+ 
+ 	menu "RGB LED"
+ 	
+ 		config RGB_LED
+ 			bool "RGB LED support"
+ 			default y
+ 			help
+ 				"When enabled the firmware includes support for
+ 				the on-board RGB LED."
+ 				   
+	    config RGB_LED_GPIO
+	        int "RGB LED GPIO number"
+	        depends on RGB_LED
+	        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+	        default 5 if IDF_TARGET_ESP32
+	        default 8 if IDF_TARGET_ESP32C3
+	        default 48 if IDF_TARGET_ESP32S3
+	        default 8
+	        help
+	            "GPIO pin number used to control the RGB LED."
+	            
+	    config RGB_LED_TASK_PRIO
+	    	int "RGB LED task priority"
+	    	depends on RGB_LED
+	    	range 0 25
+	    	default 25
+	    	help
+	    		"The priority of the task that manages the RGB LED."
     
-    config RGB_LED_GPIO
-        int "RGB LED GPIO number"
-        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
-        default 5 if IDF_TARGET_ESP32
-        default 8 if IDF_TARGET_ESP32C3
-        default 48 if IDF_TARGET_ESP32S3
-        default 8
-        help
-            GPIO pin number used to control the RGB LED.
-            
-    config RGB_LED_TASK_PRIO
-    	int "RGB LED task priority"
-    	range 0 25
-    	default 0
-    	help
-    		The priority of the task that manages the RGB LED.
+    endmenu
 
-    config BOOT_BUTTON_GPIO
-        int "BOOT button GPIO number"
-        range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
-        default 0 if IDF_TARGET_ESP32
-        default 9 if IDF_TARGET_ESP32C3
-        default 0 if IDF_TARGET_ESP32S3
-        default 9
-        help
-            GPIO pin number used by the PCB's BOOT button.
-
-    menu "Optional Features"
+    menu "BLE"
     
 		config BLE_PERIPHERAL
 			bool "BLE Peripheral"
 			default y
 			help
-				When enabled the firmware includes BLE peripheral functionality
-				to allow a mobile app to connect to the device.
+				"When enabled the firmware includes BLE peripheral functionality
+				to allow a mobile app to connect to the device."
+				
+		config BLE_HOST_TASK_PRIO
+	    	int "BLE Host task priority"
+	    	depends on BLE_PERIPHERAL
+	    	range 0 25
+	    	default 25
+	    	help
+	    		"The priority of the task that runs the BLE Host stack."
+				
+		config BLE_ADV_NAME
+			string "BLE advertised name"
+			depends on BLE_PERIPHERAL
+			help
+				"The name sent in the BLE advertisements."
+
+		config DEVICE_INFO_SERVICE
+			bool "Device Information Service"
+			depends on BLE_PERIPHERAL
+			default y
+			help
+				"When enabled the firmware includes the standard Device Information
+				Service."
+								
+		config MANUFACTURER_NAME
+			string "Manufacturer name"
+			depends on DEVICE_INFO_SERVICE
+			help
+				"The string used as the Manufacturer Name in the Device Information
+				Service."
+				
+		config MODEL_NUMBER
+			string "Model number"
+			depends on DEVICE_INFO_SERVICE
+			help
+				"The string used as the Model Number in the Device Information
+				Service."
+				
+	endmenu
+	
+	menu "WiFi"
+	
+			config WIFI_STATION
+			bool "WiFi Station"
+			default y
+			help
+				"When enabled the firmware includes WiFi station functionality
+				to allow the device to connect to the Internet."
     
 		config ESPTOUCH
 			bool "ESPTOUCH"
+			depends on WIFI_STATION
 			default y
 			help
 				Adds support for ESPTOUCH (SmartConfig) to auto configure the 
@@ -47,6 +98,7 @@ menu "Skeletal App Configuration"
 				
 		config WPS
 			bool "WiFi Protected Setup (WPS)"
+			depends on WIFI_STATION
 			default y
 			help
 				Adds support for WiFi Protected Setup (WPS) to auto configure the 
@@ -54,11 +106,13 @@ menu "Skeletal App Configuration"
 				
 		config WIFI_SSID
 			string "WiFi SSID"
+			depends on WIFI_STATION
 			help
 				Hardcoded WiFi SSID.
 				
 		config WIFI_PASSWD
 			string "WiFi Password"
+			depends on WIFI_STATION
 			help
 				Hardcoded WiFi password.
     

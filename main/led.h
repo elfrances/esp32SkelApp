@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/cdefs.h>
+
 typedef enum LedMode {
     off = 0,
     on,     // solid

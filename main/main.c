@@ -1,3 +1,4 @@
+#include "ble.h"
 #include "esp32.h"
 #include "led.h"
 #include "mlog.h"
@@ -7,7 +8,17 @@ AppConfigInfo appConfigInfo;
 
 void app_main(void)
 {
+    const esp_app_desc_t *appDesc = esp_app_get_description();
+#if (CONFIG_COMPILER_OPTIMIZATION_DEFAULT)
+    const char *buildType = "Debug";
+#else
+    const char *buildType = "Release";
+#endif
     esp_err_t err;
+
+    printf("Firmware %s (%s) built on %s at %s using ESP-IDF %s\n",
+            appDesc->version, buildType, appDesc->date, appDesc->time, appDesc->idf_ver);
+
 
 #if 1
     // On the ESP32-S3 DevKit the USB port drops whenever
@@ -26,10 +37,12 @@ void app_main(void)
         return;
     }
 
+#ifdef CONFIG_RGB_LED
     // Initialize the LED API
     if (ledInit() != 0) {
         mlog(fatal, "ledInit");
     }
+#endif
 
     err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -57,5 +70,11 @@ void app_main(void)
     if (nvramRead(&appConfigInfo) != 0) {
         mlog(fatal, "Can't read app's config info!");
     }
+
+#ifdef CONFIG_BLE_PERIPHERAL
+    if (bleInit() != 0) {
+        mlog(fatal, "bleInit!");
+    }
+#endif
 
 }

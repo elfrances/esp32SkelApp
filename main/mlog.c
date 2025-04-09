@@ -6,7 +6,6 @@
 #include <unistd.h>
 
 #include "esp32.h"
-#include "led.h"
 #include "mlog.h"
 
 #define USE_MICROSECOND_RESOLUTION  0
@@ -98,10 +97,6 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
         }
         if ((msgLogDest == both) || (msgLogDest == file)) {
             fprintf(logFile, "%s\n", msgLogBuf);
-        }
-
-        if (logLevel == fatal) {
-            ledSet(on, red);
         }
 
         xSemaphoreGive(mutexHandle);
