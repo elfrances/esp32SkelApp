@@ -9,4 +9,6 @@ void appMainTask(void *parms)
         mlog(trace, "Hello world!");
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+
+    vTaskDelete(NULL);
 }
