@@ -65,6 +65,7 @@ build/*
 # ESP-IDF files
 dependencies.lock
 sdkconfig.old
+sdkconfig
 /build/
 /managed_components/
 .clangd

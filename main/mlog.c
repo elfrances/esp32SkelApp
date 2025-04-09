@@ -36,7 +36,7 @@ static const char *logLevelName[] = {
 static bool usTimestamp = false;
 static int8_t utcOffset;
 static LogDest msgLogDest = console;
-static LogLevel msgLogLevel = info;
+static LogLevel msgLogLevel = trace;
 static FILE *logFile = NULL;
 static SemaphoreHandle_t mutexHandle;
 static StaticSemaphore_t mutexSem;
@@ -84,7 +84,7 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
         n += snprintf((p + n), (len - n), "%s %s ", fmtTimestamp(), logLevelName[logLevel]);
 
         if (logLevel >= trace) {
-            n += snprintf((p + n), (len - n), "%s@%u:%s:%d", pcTaskGetName(NULL), esp_cpu_get_core_id(), funcName, lineNum);
+            n += snprintf((p + n), (len - n), "%s@%u:%s:%d ", pcTaskGetName(NULL), esp_cpu_get_core_id(), funcName, lineNum);
         }
         va_start(ap, fmt);
         n += vsnprintf((p + n), (len - n), fmt, ap);

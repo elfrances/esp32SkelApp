@@ -12,5 +12,7 @@ __BEGIN_DECLS
 
 extern int wifiInit(WiFiConfigInfo *info);
 extern int wifiSetCredentials(WiFiConfigInfo *confInfo, const char *ssid, const char *passwd);
+extern int wifiConnect(WiFiConfigInfo *confInfo);
+extern int wifiDisconnect(void);
 
 __END_DECLS

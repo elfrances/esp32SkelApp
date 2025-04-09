@@ -54,7 +54,6 @@ const char *fmtRssi(int8_t rssi)
     return fmtBuf;
 }
 
-
 // NOTE: this handler runs in the context of the "sys_evt" task
 static void ipEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, void *evtData)
 {
@@ -68,6 +67,10 @@ static void ipEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, voi
         inet_ntop(AF_INET, &ipAddr, ipBuf, sizeof (ipBuf));
         inet_ntop(AF_INET, &gwAddr, gwBuf, sizeof (gwBuf));
         mlog(info, "Connected to router: ipAddr=%s gwAddr=%s", ipBuf, gwBuf);
+
+        // Set the LED solid blue to indicate we are
+        // connected to the network.
+        ledSet(on, blue);
 
         // Wake up the task that triggered the WiFi
         // connection...
@@ -222,7 +225,6 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
 
         mlog(info, "Got WPS credentials: SSID=\"%s\" PASS=\"%s\"", (char *) staConfig.sta.ssid, (char *) staConfig.sta.password);
 
-
         // Don't need WPS anymore
         esp_wifi_wps_disable();
 
@@ -275,8 +277,6 @@ int wifiSetCredentials(WiFiConfigInfo *confInfo, const char *ssid, const char *p
 
 int wifiInit(WiFiConfigInfo *confInfo)
 {
-    esp_err_t rc = 0;
-
     if (esp_netif_create_default_wifi_sta() == NULL)
         return -1;
 
@@ -292,16 +292,44 @@ int wifiInit(WiFiConfigInfo *confInfo)
     // Set WiFi mode to "station"
     esp_wifi_set_mode(WIFI_MODE_STA);
 
+    return 0;
+}
+
+int wifiConnect(WiFiConfigInfo *confInfo)
+{
+    esp_err_t rc = 0;
+
     mlog(info, "Connecting to router over WiFi ...");
 
-    if ((rc = esp_wifi_start()) != ESP_OK) {
-        mlog(error, "esp_wifi_start: rc=0x%04x", rc);
-        return -1;
+    if (wifiConnState == wifiDisconnected) {
+        // Let's get this party going!
+        if ((rc = esp_wifi_start()) != ESP_OK) {
+            mlog(error, "esp_wifi_start: rc=0x%04x", rc);
+            return -1;
+        }
+
+        // Block until the connection attempt finishes
+        callingTaskHandle = xTaskGetHandle(pcTaskGetName(NULL));
+        vTaskSuspend(callingTaskHandle);
     }
 
-    // Block until the connection attempt finishes
-    callingTaskHandle = xTaskGetHandle(pcTaskGetName(NULL));
-    vTaskSuspend(callingTaskHandle);
+    return 0;
+}
+
+int wifiDisconnect(void)
+{
+    esp_err_t rc = 0;
+
+    if (wifiConnState == wifiConnected) {
+        mlog(info, "Disconnecting from WiFi AP ...");
+
+        wifiConnState = wifiDisconnecting;
+
+        if ((rc = esp_wifi_disconnect()) != ESP_OK) {
+            mlog(error, "esp_wifi_disconnect: rc=0x%04x", rc);
+            return -1;
+        }
+    }
 
     return 0;
 }

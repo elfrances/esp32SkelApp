@@ -1,4 +1,5 @@
-set(srcs ble.c
+set(srcs app.c
+         ble.c
          led.c
          main.c
          mlog.c

@@ -1,3 +1,4 @@
+#include "app.h"
 #include "ble.h"
 #include "esp32.h"
 #include "led.h"
@@ -6,6 +7,32 @@
 #include "wifi.h"
 
 AppConfigInfo appConfigInfo;
+
+#ifdef CONFIG_WIFI_STATION
+// Configure SNTP and get the current date and time
+static int sntpInit(void)
+{
+    esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+
+    // pool.ntp.org is a large cluster of NTP servers
+    // distributed all over the world...
+    esp_sntp_setservername(0, "pool.ntp.org");
+
+    esp_sntp_init();
+
+    // Wait up to 10 sec to get the current ToD
+    for (int i = 0; i < 100; i++) {
+        usleep(100000); // 100 ms
+        if (sntp_get_sync_status() == SNTP_SYNC_STATUS_COMPLETED) {
+            // Done!
+            mlog(info, "Date and time set!");
+            return 0;
+        }
+    }
+
+    return -1;
+}
+#endif  // CONFIG_WIFI_STATION
 
 void app_main(void)
 {
@@ -79,15 +106,35 @@ void app_main(void)
 #endif
 
 #ifdef CONFIG_WIFI_STATION
-    if (strlen(CONFIG_WIFI_SSID) != 0) {
+    // If we have hardwired WiFi credentials, use them...
+    if ((strlen(CONFIG_WIFI_SSID) != 0) && (strlen(CONFIG_WIFI_PASSWD) != 0)) {
         strcpy(appConfigInfo.wifiConfigInfo.wifiSsid, CONFIG_WIFI_SSID);
-    }
-    if (strlen(CONFIG_WIFI_PASSWD) != 0) {
         strcpy(appConfigInfo.wifiConfigInfo.wifiPasswd, CONFIG_WIFI_PASSWD);
     }
+
     if (wifiInit(&appConfigInfo.wifiConfigInfo) != 0) {
         mlog(fatal, "wifiInit!");
     }
+
+    if (wifiConnect(&appConfigInfo.wifiConfigInfo) != 0) {
+        mlog(fatal, "wifiInit!");
+    }
+
+    // Now that we are connected to the network, set
+    // the date and time.
+    if (sntpInit() != 0) {
+        mlog(warning, "Failed to set date and time!");
+    }
+
+    // Save the WiFi credentials
+    if (nvramWrite(&appConfigInfo) != 0) {
+        mlog(fatal, "Can't save app's config info!");
+    }
 #endif
+
+    // Spawn the appMain task that will do all the work
+    if (xTaskCreatePinnedToCore(appMainTask, "appMain", CONFIG_MAIN_TASK_STACK, NULL, CONFIG_MAIN_TASK_PRIO, NULL, tskNO_AFFINITY) != pdPASS) {
+        mlog(fatal, "Can't spawn appMain task!");
+    }
 
 }

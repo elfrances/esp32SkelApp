@@ -118,5 +118,23 @@ menu "Skeletal App Configuration"
     
     endmenu
     
+    menu "Main Task"
+ 
+ 	    config MAIN_TASK_PRIO
+	    	int "Main task priority"
+	    	range 0 25
+	    	default 10
+	    	help
+	    		"The priority of the app's main task."
+	    		   
+ 	    config MAIN_TASK_STACK
+	    	int "Main task stack size"
+	    	range 3072 8192
+	    	default 4096
+	    	help
+	    		"The stack size of the app's main task."
+	    		   
+    endmenu
+    
 endmenu
 
