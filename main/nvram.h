@@ -1,9 +1,10 @@
 #pragma once
 
+#include "wifi.h"
+
 // App configuration info
 typedef struct AppConfigInfo {
-    char wifiSsid[64];
-    char wifiPasswd[64];
+    WiFiConfigInfo wifiConfigInfo;
     int8_t utcOffset;
 
 } AppConfigInfo;

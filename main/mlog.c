@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "esp32.h"
+#include "fgc.h"
 #include "mlog.h"
 
 #define USE_MICROSECOND_RESOLUTION  0

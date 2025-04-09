@@ -2,7 +2,8 @@ set(srcs ble.c
          led.c
          main.c
          mlog.c
-         nvram.c)
+         nvram.c
+         wifi.c)
 
 
 set(include_dirs ".")

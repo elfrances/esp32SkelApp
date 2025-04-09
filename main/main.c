@@ -3,6 +3,7 @@
 #include "led.h"
 #include "mlog.h"
 #include "nvram.h"
+#include "wifi.h"
 
 AppConfigInfo appConfigInfo;
 
@@ -74,6 +75,18 @@ void app_main(void)
 #ifdef CONFIG_BLE_PERIPHERAL
     if (bleInit() != 0) {
         mlog(fatal, "bleInit!");
+    }
+#endif
+
+#ifdef CONFIG_WIFI_STATION
+    if (strlen(CONFIG_WIFI_SSID) != 0) {
+        strcpy(appConfigInfo.wifiConfigInfo.wifiSsid, CONFIG_WIFI_SSID);
+    }
+    if (strlen(CONFIG_WIFI_PASSWD) != 0) {
+        strcpy(appConfigInfo.wifiConfigInfo.wifiPasswd, CONFIG_WIFI_PASSWD);
+    }
+    if (wifiInit(&appConfigInfo.wifiConfigInfo) != 0) {
+        mlog(fatal, "wifiInit!");
     }
 #endif
 

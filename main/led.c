@@ -188,4 +188,11 @@ int ledInit(void)
     return 0;
 }
 
+#else
+
+int ledSet(LedMode mode, LedColor color)
+{
+    return 0;
+}
+
 #endif  // CONFIG_RGB_LED
