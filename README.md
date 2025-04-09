@@ -6,7 +6,11 @@ Most of the optional features are configured using the "Skeletal App Configurati
 # How to use it
 
 Let's assume the app your are developing is called "myApp".
+
 Clone this repo, and rename the top level directory "esp32SkelApp" to "myApp".
+
 Edit the top-level CMakeLists.txt file and replace "esp32SkelApp" for "myApp", in the "project()" statement.
+
 Run menuconfig and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting.
 
+Add your app's code to the appMainTask() in myApp/main/app.c.
