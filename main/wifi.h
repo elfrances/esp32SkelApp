@@ -6,6 +6,7 @@
 typedef struct WiFiConfigInfo {
     char wifiSsid[64];
     char wifiPasswd[64];
+    uint8_t wifiMac[6];
 } WiFiConfigInfo;
 
 __BEGIN_DECLS

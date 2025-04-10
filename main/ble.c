@@ -1,3 +1,4 @@
+#include "app.h"
 #include "ble.h"
 #include "esp32.h"
 #include "mlog.h"
@@ -12,6 +13,7 @@
 #define GATT_FIRMWARE_REVISION_UUID             0x2a26  // READ
 #define GATT_HARDWARE_REVISION_UUID             0x2a27  // READ
 
+static SerialNumber serialNumber;
 
 static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
@@ -24,8 +26,9 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
     } else if (uuid == GATT_MODEL_NUMBER_UUID) {
         string = CONFIG_MODEL_NUMBER;
     } else if (uuid == GATT_SERIAL_NUMBER_UUID) {
-        //snprintf(strBuf, sizeof (strBuf), "%u", server->serialNumber);
-        //string = strBuf;
+        snprintf(strBuf, sizeof (strBuf), "%02X%02X%02X%02X",
+                serialNumber.digits[0], serialNumber.digits[1], serialNumber.digits[2], serialNumber.digits[3]);
+        string = strBuf;
     } else if (uuid == GATT_FIRMWARE_REVISION_UUID) {
         const esp_app_desc_t *appDesc = esp_app_get_description();
         snprintf(strBuf, sizeof (strBuf), "%s", appDesc->version);
@@ -304,11 +307,15 @@ static void nimbleHostTask(void *param)
 int bleInit(void)
 {
     int rc;
+    char devName[32];
 
     // Initialize controller and NimBLE host stack
     if ((rc = nimble_port_init()) != ESP_OK) {
         mlog(fatal, "nimble_port_init: rc=%d", rc);
     }
+
+    // Get our serial number
+    getSerialNumber(&serialNumber);
 
     // Initialize NimBLE host configuration
     ble_hs_cfg.sync_cb = nimbleOnSync;
@@ -317,7 +324,8 @@ int bleInit(void)
     // Initialize NimBLE peripheral/server configuration
     ble_svc_gap_init();
     ble_svc_gatt_init();
-    ble_svc_gap_device_name_set(CONFIG_BLE_ADV_NAME);
+    snprintf(devName, sizeof (devName), "%s-%02X%02X", CONFIG_BLE_ADV_NAME, serialNumber.digits[2], serialNumber.digits[3]);
+    ble_svc_gap_device_name_set(devName);
     ble_svc_gap_device_appearance_set(BLE_SVC_GAP_APPEARANCE_GEN_UNKNOWN);
 
     if ((rc = ble_gatts_count_cfg(gattSvcs)) != 0) {

@@ -29,6 +29,15 @@ static void wifiClearCredentials(WiFiConfigInfo *confInfo)
     memset(confInfo->wifiPasswd, 0, sizeof (confInfo->wifiPasswd));
 }
 
+// Format a LAN MAC address
+const char *fmtLanMac(const uint8_t *addr)
+{
+    static char buf[20];
+    snprintf(buf, sizeof (buf), "%02X:%02X:%02X:%02X:%02X:%02X",
+            addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+    return buf;
+}
+
 // Format an RSSI value
 const char *fmtRssi(int8_t rssi)
 {
@@ -133,7 +142,8 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
 
         esp_wifi_sta_get_rssi(&rssi);
         esp_wifi_get_channel(&priChan, &secChan);
-        mlog(info, "Connected to WiFi AP: rssi=%s, priChan=%u", fmtRssi(rssi), priChan);
+        esp_wifi_get_mac(ESP_IF_WIFI_STA, confInfo->wifiMac);
+        mlog(info, "Connected to WiFi AP: rssi=%s, priChan=%u, mac=%s", fmtRssi(rssi), priChan, fmtLanMac(confInfo->wifiMac));
     } else if (evtId == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t *disconn = evtData;
         const uint8_t reason = disconn->reason;
