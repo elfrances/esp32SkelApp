@@ -9,7 +9,7 @@ Let's assume the app your are developing is called "myApp".
 
 Clone this repo, and rename the top level directory "esp32SkelApp" to "myApp".
 
-Edit the top-level CMakeLists.txt file and replace "esp32SkelApp" for "myApp", in the "project()" statement.
+Edit the myApp/CMakeLists.txt file and in the "project()" statement replace "esp32SkelApp" for "myApp".
 
 Run menuconfig and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting.
 
