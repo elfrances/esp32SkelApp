@@ -88,14 +88,6 @@ menu "Skeletal App Configuration"
 				"When enabled the firmware includes WiFi station functionality
 				to allow the device to connect to the Internet."
     
-		config ESPTOUCH
-			bool "ESPTOUCH"
-			depends on WIFI_STATION
-			default y
-			help
-				Adds support for ESPTOUCH (SmartConfig) to auto configure the 
-				WiFi credentials using the ESPOUTCH mobile app.
-				
 		config WPS
 			bool "WiFi Protected Setup (WPS)"
 			depends on WIFI_STATION

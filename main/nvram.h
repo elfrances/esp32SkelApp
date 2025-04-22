@@ -1,14 +1,6 @@
 #pragma once
 
-#include "wifi.h"
-
-// App configuration info
-typedef struct AppConfigInfo {
-    WiFiConfigInfo wifiConfigInfo;
-    int8_t utcOffset;
-
-} AppConfigInfo;
-
+#include "app.h"
 
 __BEGIN_DECLS
 

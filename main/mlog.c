@@ -5,6 +5,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "app.h"
 #include "esp32.h"
 #include "fgc.h"
 #include "mlog.h"
@@ -34,7 +35,6 @@ static const char *logLevelName[] = {
 };
 
 static bool usTimestamp = false;
-static int8_t utcOffset;
 static LogDest msgLogDest = console;
 static LogLevel msgLogLevel = trace;
 static FILE *logFile = NULL;
@@ -50,7 +50,7 @@ static const char *fmtTimestamp(void)
     int n;
 
     gettimeofday(&now, NULL);
-    now.tv_sec += utcOffset * 3600; // adjust based on UTC offset
+    now.tv_sec += appConfigInfo.utcOffset * 3600;   // adjust based on UTC offset
     if (usTimestamp) {
         n = strftime(tsBuf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
         snprintf((tsBuf + n), (bufLen - n), ".%06u", (unsigned) now.tv_usec);

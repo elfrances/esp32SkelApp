@@ -66,15 +66,17 @@ const char *fmtRssi(int8_t rssi)
 // NOTE: this handler runs in the context of the "sys_evt" task
 static void ipEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, void *evtData)
 {
+    WiFiConfigInfo *confInfo = arg;
+
     if (evtId == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *gotIp = evtData;
-        struct in_addr ipAddr = { .s_addr = gotIp->ip_info.ip.addr};
-        struct in_addr gwAddr = { .s_addr = gotIp->ip_info.gw.addr};
+        confInfo->wifiIpAddr = gotIp->ip_info.ip.addr;
+        confInfo->wifiGwAddr = gotIp->ip_info.gw.addr;
         char ipBuf[INET_ADDRSTRLEN];
         char gwBuf[INET_ADDRSTRLEN];
 
-        inet_ntop(AF_INET, &ipAddr, ipBuf, sizeof (ipBuf));
-        inet_ntop(AF_INET, &gwAddr, gwBuf, sizeof (gwBuf));
+        inet_ntop(AF_INET, &confInfo->wifiIpAddr, ipBuf, sizeof (ipBuf));
+        inet_ntop(AF_INET, &confInfo->wifiGwAddr, gwBuf, sizeof (gwBuf));
         mlog(info, "Connected to router: ipAddr=%s gwAddr=%s", ipBuf, gwBuf);
 
         // Set the LED solid blue to indicate we are
@@ -297,10 +299,15 @@ int wifiInit(WiFiConfigInfo *confInfo)
     esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifiEvtHandler, confInfo);
 
     // Install IP config event handler
-    esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, ipEvtHandler, NULL);
+    esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, ipEvtHandler, confInfo);
 
     // Set WiFi mode to "station"
     esp_wifi_set_mode(WIFI_MODE_STA);
+
+    // To override the WiFi credentials stored
+    // in NVRAM, uncomment the following lines.
+    //strcpy(confInfo->wifiSsid, "ElkAndMoose");
+    //strcpy(confInfo->wifiPasswd, "sunvalley1228");
 
     return 0;
 }
@@ -312,6 +319,10 @@ int wifiConnect(WiFiConfigInfo *confInfo)
     mlog(info, "Connecting to router over WiFi ...");
 
     if (wifiConnState == wifiDisconnected) {
+        // Clear the current IP addresses
+        confInfo->wifiIpAddr = 0;
+        confInfo->wifiGwAddr = 0;
+
         // Let's get this party going!
         if ((rc = esp_wifi_start()) != ESP_OK) {
             mlog(error, "esp_wifi_start: rc=0x%04x", rc);

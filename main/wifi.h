@@ -4,9 +4,11 @@
 
 // WiFi configuration info
 typedef struct WiFiConfigInfo {
-    char wifiSsid[64];
-    char wifiPasswd[64];
-    uint8_t wifiMac[6];
+    char wifiSsid[64];      // SSID string
+    char wifiPasswd[64];    // Password string
+    uint8_t wifiMac[6];     // WiFi MAC address
+    uint32_t wifiIpAddr;    // DHCP assigned IP address
+    uint32_t wifiGwAddr;    // WiFi router IP address
 } WiFiConfigInfo;
 
 __BEGIN_DECLS
