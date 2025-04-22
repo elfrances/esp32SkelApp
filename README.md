@@ -7,10 +7,13 @@ Most of the optional features are configured using the "Skeletal App Configurati
 
 Let's assume the app your are developing is called "myApp".
 
-Clone this repo, and rename the top level directory "esp32SkelApp" to "myApp".
+```
+git clone https://github.com/elfrances/esp32SkelApp.git
+rm -rf esp32SkelApp/.git
+mv esp32SkelApp myApp
+sed -i s'/esp32SkelApp/myApp/' myApp/CMakeLists.txt
+```
 
-Edit the myApp/CMakeLists.txt file and in the "project()" statement replace "esp32SkelApp" for "myApp".
-
-Run menuconfig and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting.
+Run the ESP-IDF menuconfig command and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting.
 
 Add your app's code to the appMainTask() in myApp/main/app.c.
