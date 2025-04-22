@@ -1,6 +1,6 @@
 # esp32SkelApp
 
-A skeletal app for the ESP32 that can be used as a template when creating a new app that uses WiFi and/or BLE.
+An ESP-IDF skeletal app for the ESP32 SoC that can be used as a template when creating a new app that uses WiFi and/or BLE.
 Most of the optional features are configured using the "Skeletal App Configuration" section in the sdkconfig.
 
 # How to use it
