@@ -1,6 +1,6 @@
 menu "Skeletal App Configuration"
 
-    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+	orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
  
  	menu "RGB LED"
  	
@@ -11,28 +11,29 @@ menu "Skeletal App Configuration"
  				"When enabled the firmware includes support for
  				the on-board RGB LED."
  				   
-	    config RGB_LED_GPIO
-	        int "RGB LED GPIO number"
-	        depends on RGB_LED
-	        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
-	        default 5 if IDF_TARGET_ESP32
-	        default 8 if IDF_TARGET_ESP32C3
-	        default 48 if IDF_TARGET_ESP32S3
-	        default 8
-	        help
-	            "GPIO pin number used to control the RGB LED."
+		config RGB_LED_GPIO
+			int "RGB LED GPIO number"
+			depends on RGB_LED
+			range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+			default 5 if IDF_TARGET_ESP32
+			default 8 if IDF_TARGET_ESP32C3
+			default 48 if IDF_TARGET_ESP32S3
+			default 8
+			help
+				"GPIO pin number used to control the RGB LED."
 	            
-	    config RGB_LED_TASK_PRIO
-	    	int "RGB LED task priority"
-	    	depends on RGB_LED
-	    	range 0 25
-	    	default 25
-	    	help
-	    		"The priority of the task that manages the RGB LED."
+		config RGB_LED_TASK_PRIO
+			int "RGB LED task priority"
+			depends on RGB_LED
+			range 0 24
+			default 24
+			help
+				"The priority of the task that manages the RGB LED.
+                                The valid range is: 0 to (configMAX_PRIORITIES-1)."
     
-    endmenu
+	endmenu
 
-    menu "BLE"
+	menu "BLE"
     
 		config BLE_PERIPHERAL
 			bool "BLE Peripheral"
@@ -42,12 +43,13 @@ menu "Skeletal App Configuration"
 				to allow a mobile app to connect to the device."
 				
 		config BLE_HOST_TASK_PRIO
-	    	int "BLE Host task priority"
-	    	depends on BLE_PERIPHERAL
-	    	range 0 25
-	    	default 25
-	    	help
-	    		"The priority of the task that runs the BLE Host stack."
+			int "BLE Host task priority"
+			depends on BLE_PERIPHERAL
+			range 0 24
+			default 24
+			help
+				"The priority of the task that runs the BLE Host stack.
+                                The valid range is: 0 to (configMAX_PRIORITIES-1)."
 				
 		config BLE_ADV_NAME
 			string "BLE advertised name"
@@ -81,7 +83,7 @@ menu "Skeletal App Configuration"
 	
 	menu "WiFi"
 	
-			config WIFI_STATION
+		config WIFI_STATION
 			bool "WiFi Station"
 			default y
 			help
@@ -93,38 +95,41 @@ menu "Skeletal App Configuration"
 			depends on WIFI_STATION
 			default y
 			help
-				Adds support for WiFi Protected Setup (WPS) to auto configure the 
-				WiFi credentials using the WiFi router.
+				"Adds support for WiFi Protected Setup (WPS) to auto configure the 
+				WiFi credentials using the WiFi router."
 				
 		config WIFI_SSID
 			string "WiFi SSID"
 			depends on WIFI_STATION
 			help
-				Hardcoded WiFi SSID.
+				"Hardcoded WiFi SSID."
 				
 		config WIFI_PASSWD
 			string "WiFi Password"
 			depends on WIFI_STATION
 			help
-				Hardcoded WiFi password.
+				"Hardcoded WiFi password."
     
     endmenu
     
     menu "Main Task"
  
- 	    config MAIN_TASK_PRIO
-	    	int "Main task priority"
-	    	range 0 25
-	    	default 10
-	    	help
-	    		"The priority of the app's main task."
+ 		config MAIN_TASK_PRIO
+			int "Main task priority"
+			range 0 24
+			default 10
+			help
+				"The priority of the app's main task, spawned by app_main()
+				during start up.
+				The valid range is: 0 to (configMAX_PRIORITIES-1)."
 	    		   
- 	    config MAIN_TASK_STACK
-	    	int "Main task stack size"
-	    	range 3072 8192
-	    	default 4096
-	    	help
-	    		"The stack size of the app's main task."
+		config MAIN_TASK_STACK
+			int "Main task stack size"
+			range 3072 8192
+			default 4096
+			help
+				"The stack size of the app's main task,
+				spawned by app_main() during start up."
 	    		   
     endmenu
     

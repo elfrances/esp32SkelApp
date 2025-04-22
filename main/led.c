@@ -151,7 +151,7 @@ int ledInit(void)
     led_strip_clear(ledStripHandle);
 
     // Spawn the ledTask that will manage the LED
-    xTaskCreatePinnedToCore(ledTask, "ledMgr", 3072, NULL, configMAX_PRIORITIES, &ledTaskHandle, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(ledTask, "ledMgr", 3072, NULL, CONFIG_RGB_LED_TASK_PRIO, &ledTaskHandle, tskNO_AFFINITY);
 
 #if 0
     {
