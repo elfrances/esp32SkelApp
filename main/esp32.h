@@ -14,12 +14,9 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
-#include "driver/uart.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_netif.h"
-#include "esp_smartconfig.h"
-#include "esp_crt_bundle.h"
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
@@ -28,25 +25,20 @@
 #include "esp_wifi.h"
 #include "esp_wps.h"
 #endif
-#if (CONFIG_ETH_ENABLED)
-#include "esp_eth.h"
-#endif
 
 #include "lwip/sockets.h"
 #include "apps/esp_sntp.h"
-#ifdef CONFIG_MDNS_MAX_INTERFACES
-#include "mdns.h"
-#endif
 
+#if (CONFIG_BT_NIMBLE_ENABLED)
 #include "nimble/ble.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
 #include "host/util/util.h"
-#include "console/console.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "services/ans/ble_svc_ans.h"
+#endif
 
 __BEGIN_DECLS
 

@@ -37,6 +37,7 @@ menu "Skeletal App Configuration"
     
 		config BLE_PERIPHERAL
 			bool "BLE Peripheral"
+			depends on BT_NIMBLE_ENABLED
 			default y
 			help
 				"When enabled the firmware includes BLE peripheral functionality
@@ -85,6 +86,7 @@ menu "Skeletal App Configuration"
 	
 		config WIFI_STATION
 			bool "WiFi Station"
+			depends on ESP_WIFI_ENABLED
 			default y
 			help
 				"When enabled the firmware includes WiFi station functionality
