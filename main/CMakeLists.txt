@@ -4,6 +4,7 @@ set(srcs app.c
          main.c
          mlog.c
          nvram.c
+         ota.c
          wifi.c)
 
 

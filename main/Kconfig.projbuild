@@ -55,6 +55,7 @@ menu "Skeletal App Configuration"
 		config BLE_ADV_NAME
 			string "BLE advertised name"
 			depends on BLE_PERIPHERAL
+			default "SKELAPP"
 			help
 				"The name sent in the BLE advertisements."
 
@@ -69,6 +70,7 @@ menu "Skeletal App Configuration"
 		config MANUFACTURER_NAME
 			string "Manufacturer name"
 			depends on DEVICE_INFO_SERVICE
+			default "Acme Corporation"
 			help
 				"The string used as the Manufacturer Name in the Device Information
 				Service."
@@ -76,6 +78,7 @@ menu "Skeletal App Configuration"
 		config MODEL_NUMBER
 			string "Model number"
 			depends on DEVICE_INFO_SERVICE
+			default "SkelApp"
 			help
 				"The string used as the Model Number in the Device Information
 				Service."
@@ -112,9 +115,53 @@ menu "Skeletal App Configuration"
 			help
 				"Hardcoded WiFi password."
     
-    endmenu
+	endmenu
     
-    menu "Main Task"
+	menu "OTA Update"
+
+		config OTA_UPDATE
+			bool "OTA Update"
+			depends on WIFI_STATION
+			help
+				"Add support for OTA firmware update over WiFi."
+
+		config OTA_SERVER_FQDN
+			string "OTA Server FQDN"
+			depends on OTA_UPDATE
+			default "ota.acme.com"
+			help
+				"The FQDN (or IPv4 address) of the remote OTA server."
+
+		config OTA_TCP_PORT
+			int "OTA TCP Port"
+			depends on OTA_UPDATE
+                        range 1024 65536
+                        default 8070
+			help
+				"The TCP port for the HTTPS connection to the remote
+				OTA server."
+
+		
+ 		config OTA_TASK_PRIO
+			int "OTA Update task priority"
+			depends on OTA_UPDATE
+			range 0 24
+			default 10
+			help
+				"The priority of the OTA Update task. The valid range is: 
+				0 to (configMAX_PRIORITIES-1)."
+
+		config OTA_TASK_STACK
+			int "OTA Update task stack size"
+			depends on OTA_UPDATE
+			range 5120 8192
+			default 5120
+			help
+				"The stack size of the OTA Update task."
+
+	endmenu
+
+	menu "Main Task"
  
  		config MAIN_TASK_PRIO
 			int "Main task priority"
@@ -133,7 +180,7 @@ menu "Skeletal App Configuration"
 				"The stack size of the app's main task,
 				spawned by app_main() during start up."
 	    		   
-    endmenu
+	endmenu
     
 endmenu
 

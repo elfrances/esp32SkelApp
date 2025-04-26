@@ -268,7 +268,7 @@ static int procConnectEvent(const struct ble_gap_event *event)
 static int procDisconnectEvent(const struct ble_gap_event *event)
 {
     if (event->disconnect.conn.conn_handle == inbConnInfo.connHandle) {
-        mlog(trace, "Inbound BLE connection dropped: connHandle=%u reason=0x%03x", inbConnInfo.connHandle, event->disconnect.reason);
+        mlog(info, "Inbound BLE connection dropped: connHandle=%u reason=0x%03x", inbConnInfo.connHandle, event->disconnect.reason);
         memset(&inbConnInfo, 0, sizeof (inbConnInfo));
         nimbleAdvertise();
     }
@@ -290,7 +290,12 @@ static int procNotificationTxEvent(const struct ble_gap_event *event)
 
 static int procSubscribeEvent(const struct ble_gap_event *event)
 {
-    mlog(info, "BLE_GAP_EVENT_SUBSCRIBE: connHandle=%u valHandle=%u notify=%u indicate=%u", event->subscribe.conn_handle, event->subscribe.attr_handle, event->subscribe.cur_notify, event->subscribe.cur_indicate);
+    // When the iOS LightBlue mobile app connects, it
+    // enables indications on the characteristic with
+    // the attribute handle 8, which we don't care...
+    if (event->subscribe.attr_handle != 8) {
+        mlog(info, "BLE_GAP_EVENT_SUBSCRIBE: connHandle=%u valHandle=%u notify=%u indicate=%u", event->subscribe.conn_handle, event->subscribe.attr_handle, event->subscribe.cur_notify, event->subscribe.cur_indicate);
+    }
 
     return 0;
 }
@@ -350,6 +355,12 @@ static int nimbleGapEventCb(struct ble_gap_event *event, void *arg)
         mlog(warning, "BLE_GAP_EVENT_REATTEMPT_COUNT: connHandle=%u reatemptCount=%u", event->reattempt_cnt.conn_handle, event->reattempt_cnt.count);
         break;
 #endif
+
+    case BLE_GAP_EVENT_DATA_LEN_CHG:
+        break;
+
+    case BLE_GAP_EVENT_LINK_ESTAB:
+        break;
 
     default:
         mlog(warning, "Unhandled event! type=%u", event->type);
