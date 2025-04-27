@@ -3,6 +3,7 @@
 #include "esp32.h"
 #include "mlog.h"
 #include "nvram.h"
+#include "ota.h"
 
 #ifdef CONFIG_BLE_PERIPHERAL
 
@@ -51,6 +52,7 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
 #define GATT_WIFI_CREDENTIALS_UUID              0xFE01  // READ, WRITE
 #define GATT_WIFI_IP_ADDRESS_UUID               0xFE02  // READ
 #define GATT_UTC_OFFSET_UUID                    0xFE03  // READ, WRITE
+#define GATT_COMMAND_UUID                       0xFE04  // READ, WRITE
 
 static int getWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
 {
@@ -129,6 +131,110 @@ static int setUtcOffset(struct ble_gatt_access_ctxt *ctxt)
     return 0;
 }
 
+typedef enum CmdOpCode {
+    coNoOp = 0,
+    coRestartDevice,
+    coClearConfig,
+    coStartOtaUpdate,
+    coSetLogLevel,
+    coMax
+} CmdOpCode;
+
+typedef enum CmdStatus {
+    csIdle = 0,
+    csInProg,
+    csSuccess,
+    csFailed,
+    csInvOpCode,
+    csInvParam,
+} CmdStatus;
+
+static CmdStatus cmdStatus = csIdle;
+
+static int getCmdStatus(struct ble_gatt_access_ctxt *ctxt)
+{
+    uint8_t cs = cmdStatus;
+    return (os_mbuf_append(ctxt->om, &cs, sizeof (cs)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+
+static CmdStatus restartDeviceCmd(struct os_mbuf *om)
+{
+    mlog(info, "Restarting the device...");
+    esp_restart();
+    return csSuccess;
+}
+
+static CmdStatus clearConfigCmd(struct os_mbuf *om)
+{
+    mlog(info, "Clearing the device configuration...");
+    return (nvramClear() == 0) ? csSuccess : csFailed;
+}
+
+static CmdStatus startOtaUpdateCmd(struct os_mbuf *om)
+{
+#ifdef CONFIG_OTA_UPDATE
+    return (otaUpdateStart() == 0) ? csSuccess : csFailed;
+#else
+    return csInvOpCode;
+#endif
+}
+
+static CmdStatus setLogLevelCmd(struct os_mbuf *om)
+{
+    LogLevel logLevel = om->om_data[1];
+    if (logLevel > debug) {
+        return csInvParam;
+    }
+    msgLogSetLevel(logLevel);
+    return csSuccess;
+}
+
+static int runCmd(struct ble_gatt_access_ctxt *ctxt)
+{
+    struct os_mbuf *om = ctxt->om;
+    CmdOpCode opCode;
+
+    if ((om == NULL) || (om->om_len < 1)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    if (cmdStatus == csInProg) {
+        // Last command still in progress
+        return 0;
+    }
+
+    opCode = om->om_data[0];
+    cmdStatus = csInProg;
+
+    switch (opCode) {
+    case coNoOp:
+        cmdStatus = csSuccess;
+        break;
+
+    case coRestartDevice:
+        cmdStatus = restartDeviceCmd(om);
+        break;
+
+    case coClearConfig:
+        cmdStatus = clearConfigCmd(om);
+        break;
+
+    case coStartOtaUpdate:
+        cmdStatus = startOtaUpdateCmd(om);
+        break;
+
+    case coSetLogLevel:
+        cmdStatus = setLogLevelCmd(om);
+        break;
+
+    default:
+        cmdStatus = csInvOpCode;
+        break;
+    }
+
+    return 0;
+}
+
 static int deviceConfigCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     uint16_t uuid = ble_uuid_u16(ctxt->chr->uuid);
@@ -147,14 +253,21 @@ static int deviceConfigCb(uint16_t conn_handle, uint16_t attr_handle, struct ble
         } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
             return setUtcOffset(ctxt);
         }
+    } else if (uuid == GATT_COMMAND_UUID) {
+        if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
+            return getCmdStatus(ctxt);
+        } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+            return runCmd(ctxt);
+        }
     }
 
     return 0;
 }
 
+// Table of supported BLE services and their characteristics
 static const struct ble_gatt_svc_def gattSvcs[] = {
     {
-        // Device Information Service
+        // Standard Device Information Service
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
         .uuid = BLE_UUID16_DECLARE(GATT_DEVICE_INFO_UUID),
         .characteristics = (struct ble_gatt_chr_def[]) {
@@ -195,7 +308,7 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
     },
 
     {
-        // Device Configuration Service
+        // Custom Device Configuration Service
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
         .uuid = BLE_UUID16_DECLARE(GATT_DEVICE_CONFIG_UUID),
         .characteristics = (struct ble_gatt_chr_def[]) {
@@ -214,6 +327,12 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
             {
                 // UTC Offset
                 .uuid = BLE_UUID16_DECLARE(GATT_UTC_OFFSET_UUID),
+                .access_cb = deviceConfigCb,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE
+            },
+            {
+                // Command
+                .uuid = BLE_UUID16_DECLARE(GATT_COMMAND_UUID),
                 .access_cb = deviceConfigCb,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE
             },

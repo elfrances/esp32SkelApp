@@ -27,8 +27,8 @@ static char otaUpdateUrl[80];
 extern esp_err_t esp_https_ota_terminate(void);
 
 // This is the server's certificate
-extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
-extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
+extern const uint8_t server_cert_pem_start[] asm("_binary_ota_cert_pem_start");
+extern const uint8_t server_cert_pem_end[] asm("_binary_ota_cert_pem_end");
 
 typedef enum OtaUpdState {
     otaUpdStart = 0,

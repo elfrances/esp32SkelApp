@@ -194,9 +194,11 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
             mlog(warning, "Disconnected from WiFi AP: reason=%u", reason);
 #ifdef CONFIG_WPS
             // When using WPS to autoconfig the WiFi credentials, we may
-            // get an AUTH_FAIL and 802_1X_AUTH_FAILED that we can ignore
-            // as the WPS procedure seems to complete OK anyway...
-            if ((reason == WIFI_REASON_AUTH_FAIL) ||
+            // get an ASSOC_LEAVE, AUTH_FAIL and 802_1X_AUTH_FAILED that
+            // we can ignore, as the WPS procedure seems to complete OK
+            // anyway...
+            if ((reason == WIFI_REASON_ASSOC_LEAVE) ||
+                (reason == WIFI_REASON_AUTH_FAIL) ||
                 (reason == WIFI_REASON_802_1X_AUTH_FAILED)) {
                 retry = false;
             }
