@@ -60,7 +60,7 @@ void app_main(void)
     // this point NTP has not set the correct date & time
     // yet, therefore the timestamps will be based on the
     // Epoch (1970-01-01 at 00:00:00) ...
-    if (msgLogInit(false) != 0) {
+    if (msgLogInit(CONFIG_MSG_LOG_LEVEL, CONFIG_MSG_LOG_DEST) != 0) {
         printf("SPONG! Failed to init msgLog API!\n");
         return;
     }
@@ -132,7 +132,7 @@ void app_main(void)
 
 #ifdef CONFIG_APP_MAIN_TASK
     // Spawn the appMain task that will do all the work
-    if (xTaskCreatePinnedToCore(appMainTask, "appMain", CONFIG_MAIN_TASK_STACK, NULL, CONFIG_MAIN_TASK_PRIO, NULL, tskNO_AFFINITY) != pdPASS) {
+    if (xTaskCreatePinnedToCore(appMainTask, "appMain", CONFIG_MAIN_TASK_STACK, NULL, CONFIG_MAIN_TASK_PRIO, NULL, CONFIG_MAIN_TASK_CPU) != pdPASS) {
         mlog(fatal, "Can't spawn appMain task!");
     }
 #else

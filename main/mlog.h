@@ -36,7 +36,7 @@ __BEGIN_DECLS
 
 extern void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, const char *fmt, ...)  __attribute__ ((__format__ (__printf__, 5, 6)));
 
-extern int msgLogInit(bool usTimestamp);
+extern int msgLogInit(LogLevel defLogLevel, LogDest defLogDest);
 extern LogDest msgLogSetDest(LogDest logDest);
 extern LogLevel msgLogSetLevel(LogLevel logLevel);
 extern LogLevel msgLogGetLevel(void);

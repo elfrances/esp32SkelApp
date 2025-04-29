@@ -38,24 +38,52 @@ menu "Skeletal App Configuration"
 		help
 			"When enabled the firmware includes support for
 			message logging to the console or a file."
+			
+	choice MSG_LOG_LEVEL
+        	prompt "Message Log Level"
+		default MSG_LOG_LEVEL_INFO
+		help
+			"Defines the default message log level."
+
+		config MSG_LOG_LEVEL_NONE
+			bool "No logging"
+		config MSG_LOG_LEVEL_INFO
+			bool "Informational"
+		config MSG_LOG_LEVEL_TRACE 
+			bool "Code tracing"
+		config MSG_LOG_LEVEL_DEBUG 
+			bool "Code debugging"
+		depends on MSG_LOG
+	endchoice
 	
 	config MSG_LOG_LEVEL
-		int "Default Message Log Level"
-		depends on MSG_LOG
-		default 1
-		range 0 3
+		int
+		default 0 if MSG_LOG_LEVEL_NONE 
+		default 1 if MSG_LOG_LEVEL_INFO
+		default 2 if MSG_LOG_LEVEL_TRACE 
+		default 3 if MSG_LOG_LEVEL_DEBUG 
+	
+	choice MSG_LOG_DEST
+        	prompt "Message Log Destination"
+		default MSG_LOG_DEST_CONSOLE
 		help
-			"Indicates the default message log level: 0=none,
-			1=info, 2=trace, 3=debug."
-		
+			"Defines the default message log destination."
+
+		config MSG_LOG_DEST_CONSOLE
+			bool "Console"
+		config MSG_LOG_DEST_FILE
+			bool "File"
+		config MSG_LOG_DEST_BOTH 
+			bool "Console and File"
+		depends on MSG_LOG
+	endchoice
+	
 	config MSG_LOG_DEST
-		string "Message log destination"
-		depends on MSG_LOG
-		default "console"
-		depends on MSG_LOG
-		help
-			"Indicates the destination of the message logs."
-			
+		int
+		default 1 if MSG_LOG_DEST_BOTH
+		default 2 if MSG_LOG_DEST_CONSOLE
+		default 3 if MSG_LOG_DEST_FILE
+		
 	config MSG_LOG_MICROSEC_TIMESTAMP
 		bool "Microsecond timestamp"
 		depends on MSG_LOG
@@ -63,6 +91,15 @@ menu "Skeletal App Configuration"
 		help
 			"When enabled the timestamp in the message logs
 			has microsecond resolution."
+			
+	config MSG_LOG_MAX_LEN
+		int "Max length of a log message"
+		depends on MSG_LOG
+		default 256
+		help
+			"Indicates the maximum length of a log message.
+			Used to dimension the memory buffer where the
+			text is formatted."
 		
 	menuconfig BLE_PERIPHERAL
 		bool "BLE Peripheral"
@@ -203,6 +240,27 @@ menu "Skeletal App Configuration"
 		help
 			"The stack size of the app's main task, spawned by app_main() 
 			during start up."
+			
+	choice MAIN_TASK_CPU
+        	prompt "Main task CPU affinity"
+		default MAIN_TASK_CPU_NO_AFFINITY
+		help
+			"The CPU core of the app's main task."
+
+		config MAIN_TASK_CPU_NO_AFFINITY
+			bool "No affinity"
+		config MAIN_TASK_CPU_CORE0
+			bool "CPU0"
+		config MAIN_TASK_CPU_CORE1 
+			bool "CPU1"
+		depends on !FREERTOS_UNICORE
+	endchoice
+				
+	config MAIN_TASK_CPU
+		hex
+		default FREERTOS_NO_AFFINITY if MAIN_TASK_CPU_NO_AFFINITY
+		default 0x0 if MAIN_TASK_CPU_CORE0
+		default 0x1 if MAIN_TASK_CPU_CORE1
 				
 	config MAIN_TASK_TICK_PERIOD
 		int "Main task tick period"

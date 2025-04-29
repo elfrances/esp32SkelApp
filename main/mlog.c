@@ -65,7 +65,7 @@ static const char *fmtTimestamp(void)
     return tsBuf;
 }
 
-static char msgLogBuf[1024];
+static char msgLogBuf[CONFIG_MSG_LOG_MAX_LEN];
 
 void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, const char *fmt, ...)
 {
@@ -102,8 +102,12 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
     }
 }
 
-int msgLogInit(bool usTimestamp)
+int msgLogInit(LogLevel defLogLevel, LogDest defLogDest)
 {
+    msgLogLevel = defLogLevel;
+    msgLogDest = defLogDest;
+
+    // Semaphore used to serialize the calls to mlog()
     if ((mutexHandle = xSemaphoreCreateMutexStatic(&mutexSem)) == NULL) {
         // Hu?
         return -1;
@@ -151,7 +155,7 @@ LogLevel msgLogGetLevel(void)
     return msgLogLevel;
 }
 #else
-int msgLogInit(bool usTimestamp)
+int msgLogInit(LogLevel defLogLevel, LogDest defLogDest)
 {
     return 0;
 }
