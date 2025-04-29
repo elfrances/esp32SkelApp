@@ -65,12 +65,10 @@ void app_main(void)
         return;
     }
 
-#ifdef CONFIG_RGB_LED
     // Initialize the LED API
     if (ledInit() != 0) {
         mlog(fatal, "ledInit");
     }
-#endif
 
     err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -132,9 +130,13 @@ void app_main(void)
     }
 #endif
 
+#ifdef CONFIG_APP_MAIN_TASK
     // Spawn the appMain task that will do all the work
     if (xTaskCreatePinnedToCore(appMainTask, "appMain", CONFIG_MAIN_TASK_STACK, NULL, CONFIG_MAIN_TASK_PRIO, NULL, tskNO_AFFINITY) != pdPASS) {
         mlog(fatal, "Can't spawn appMain task!");
     }
+#else
+    // Add your app code here...
+#endif
 
 }

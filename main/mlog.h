@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <errno.h>
 
+#include "sdkconfig.h"
+
 typedef enum LogDest {
     undef = 0,
     both = 1,
@@ -14,7 +16,6 @@ typedef enum LogDest {
 typedef enum LogLevel {
     none = 0,
     info,
-    dump,
     trace,
     debug,
     warning,
@@ -23,12 +24,13 @@ typedef enum LogLevel {
     fatal
 } LogLevel;
 
+#ifdef CONFIG_MSG_LOG
 // This macro is used to pick up the file name, line number,
 // and errno value from where msgLog() is being called.
 #define mlog(lvl, fmt, args...) msgLog((lvl), __func__, __LINE__, errno, (fmt), ##args)
-
-// Shorthand for mlog(debug, ...) that can be easily compiled out
-#define mlogDbg(fmt, args...) msgLog(debug, __func__, __LINE__, errno, (fmt), ##args)
+#else
+#define mlog(lvl, fmt, args...)
+#endif
 
 __BEGIN_DECLS
 

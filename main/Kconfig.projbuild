@@ -2,185 +2,219 @@ menu "Skeletal App Configuration"
 
 	orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
  
- 	menu "RGB LED"
- 	
- 		config RGB_LED
- 			bool "RGB LED support"
- 			default y
- 			help
- 				"When enabled the firmware includes support for
- 				the on-board RGB LED."
+ 	menuconfig RGB_LED
+ 		bool "RGB LED"
+ 		default y
+ 		help
+ 			"When enabled the firmware includes support for
+ 			the on-board RGB LED."
  				   
-		config RGB_LED_GPIO
-			int "RGB LED GPIO number"
-			depends on RGB_LED
-			range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
-			default 5 if IDF_TARGET_ESP32
-			default 8 if IDF_TARGET_ESP32C3
-			default 48 if IDF_TARGET_ESP32S3
-			default 8
-			help
-				"GPIO pin number used to control the RGB LED."
+	config RGB_LED_GPIO
+		int "RGB LED GPIO number"
+		depends on RGB_LED
+		range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+		default 5 if IDF_TARGET_ESP32
+		default 8 if IDF_TARGET_ESP32C3
+		default 48 if IDF_TARGET_ESP32S3
+		default 8
+		help
+			"GPIO pin number used to control the RGB LED."
 	            
-		config RGB_LED_TASK_PRIO
-			int "RGB LED task priority"
-			depends on RGB_LED
-			range 0 24
-			default 24
-			help
-				"The priority of the task that manages the RGB LED.
-                                The valid range is: 0 to (configMAX_PRIORITIES-1)."
-    
-	endmenu
-
-	menu "BLE"
-    
-		config BLE_PERIPHERAL
-			bool "BLE Peripheral"
-			depends on BT_NIMBLE_ENABLED
-			default y
-			help
-				"When enabled the firmware includes BLE peripheral functionality
-				to allow a mobile app to connect to the device."
-				
-		config BLE_HOST_TASK_PRIO
-			int "BLE Host task priority"
-			depends on BLE_PERIPHERAL
-			range 0 24
-			default 24
-			help
-				"The priority of the task that runs the BLE Host stack.
-                                The valid range is: 0 to (configMAX_PRIORITIES-1)."
-				
-		config BLE_ADV_NAME
-			string "BLE advertised name"
-			depends on BLE_PERIPHERAL
-			default "SKELAPP"
-			help
-				"The name sent in the BLE advertisements."
-
-		config DEVICE_INFO_SERVICE
-			bool "Device Information Service"
-			depends on BLE_PERIPHERAL
-			default y
-			help
-				"When enabled the firmware includes the standard Device Information
-				Service."
-								
-		config MANUFACTURER_NAME
-			string "Manufacturer name"
-			depends on DEVICE_INFO_SERVICE
-			default "Acme Corporation"
-			help
-				"The string used as the Manufacturer Name in the Device Information
-				Service."
-				
-		config MODEL_NUMBER
-			string "Model number"
-			depends on DEVICE_INFO_SERVICE
-			default "SkelApp"
-			help
-				"The string used as the Model Number in the Device Information
-				Service."
-				
-	endmenu
+	config RGB_LED_TASK_PRIO
+		int "RGB LED task priority"
+		depends on RGB_LED
+		range 0 24
+		default 24
+		help
+			"The priority of the task that manages the RGB LED.
+                         The valid range is: 0 to (configMAX_PRIORITIES-1).
+                         The RGB LED task consumes little CPU, so it is OK
+                         to give it a high priority to keep the LED blinking
+                         rate accurate."
 	
-	menu "WiFi"
+	menuconfig MSG_LOG
+		bool "Message Logging"
+		default y
+		help
+			"When enabled the firmware includes support for
+			message logging to the console or a file."
 	
-		config WIFI_STATION
-			bool "WiFi Station"
-			depends on ESP_WIFI_ENABLED
-			default y
-			help
-				"When enabled the firmware includes WiFi station functionality
-				to allow the device to connect to the Internet."
-    
-		config WPS
-			bool "WiFi Protected Setup (WPS)"
-			depends on WIFI_STATION
-			default y
-			help
-				"Adds support for WiFi Protected Setup (WPS) to auto configure the 
-				WiFi credentials using the WiFi router."
-				
-		config WIFI_SSID
-			string "WiFi SSID"
-			depends on WIFI_STATION
-			help
-				"Hardcoded WiFi SSID."
-				
-		config WIFI_PASSWD
-			string "WiFi Password"
-			depends on WIFI_STATION
-			help
-				"Hardcoded WiFi password."
-    
-	endmenu
-    
-	menu "OTA Update"
-
-		config OTA_UPDATE
-			bool "OTA Update"
-			depends on WIFI_STATION
-			help
-				"Add support for OTA firmware update over WiFi."
-
-		config OTA_SERVER_FQDN
-			string "OTA Server FQDN"
-			depends on OTA_UPDATE
-			default "ota.acme.com"
-			help
-				"The FQDN (or IPv4 address) of the remote OTA server."
-
-		config OTA_TCP_PORT
-			int "OTA TCP Port"
-			depends on OTA_UPDATE
-                        range 1024 65536
-                        default 8070
-			help
-				"The TCP port for the HTTPS connection to the remote
-				OTA server."
-
+	config MSG_LOG_LEVEL
+		int "Default Message Log Level"
+		depends on MSG_LOG
+		default 1
+		range 0 3
+		help
+			"Indicates the default message log level: 0=none,
+			1=info, 2=trace, 3=debug."
 		
- 		config OTA_TASK_PRIO
-			int "OTA Update task priority"
-			depends on OTA_UPDATE
-			range 0 24
-			default 10
-			help
-				"The priority of the OTA Update task. The valid range is: 
-				0 to (configMAX_PRIORITIES-1)."
+	config MSG_LOG_DEST
+		string "Message log destination"
+		depends on MSG_LOG
+		default "console"
+		depends on MSG_LOG
+		help
+			"Indicates the destination of the message logs."
+			
+	config MSG_LOG_MICROSEC_TIMESTAMP
+		bool "Microsecond timestamp"
+		depends on MSG_LOG
+		default n
+		help
+			"When enabled the timestamp in the message logs
+			has microsecond resolution."
+		
+	menuconfig BLE_PERIPHERAL
+		bool "BLE Peripheral"
+		depends on BT_NIMBLE_ENABLED
+		default y
+		help
+			"When enabled the firmware includes BLE peripheral functionality
+			to allow a mobile app to connect to the device."
+				
+	config BLE_HOST_TASK_PRIO
+		int "BLE Host task priority"
+		depends on BLE_PERIPHERAL
+		range 0 24
+		default 24
+		help
+			"The priority of the task that runs the BLE Host stack.
+			The valid range is: 0 to (configMAX_PRIORITIES-1)."
+				
+	config BLE_ADV_NAME
+		string "BLE advertised name"
+		depends on BLE_PERIPHERAL
+		default "SKELAPP"
+		help
+			"The name sent in the BLE advertisements."
 
-		config OTA_TASK_STACK
-			int "OTA Update task stack size"
-			depends on OTA_UPDATE
-			range 5120 8192
-			default 5120
-			help
-				"The stack size of the OTA Update task."
+	config DEVICE_INFO_SERVICE
+		bool "Device Information Service"
+		depends on BLE_PERIPHERAL
+		default y
+		help
+			"When enabled the firmware includes the standard Device Information
+			Service."
+								
+	config MANUFACTURER_NAME
+		string "Manufacturer name"
+		depends on DEVICE_INFO_SERVICE
+		default "Acme Corporation"
+		help
+			"The string used as the Manufacturer Name in the Device Information
+			Service."
+				
+	config MODEL_NUMBER
+		string "Model number"
+		depends on DEVICE_INFO_SERVICE
+		default "SkelApp"
+		help
+			"The string used as the Model Number in the Device Information
+			Service."
+	
+	menuconfig WIFI_STATION
+		bool "WiFi Station"
+		depends on ESP_WIFI_ENABLED
+		default y
+		help
+			"When enabled the firmware includes WiFi station functionality
+			to allow the device to connect to the Internet."
+    
+	config WPS
+		bool "WiFi Protected Setup (WPS)"
+		depends on WIFI_STATION
+		default y
+		help
+			"Adds support for WiFi Protected Setup (WPS) to auto configure the 
+			WiFi credentials using the WiFi router."
+				
+	config WIFI_SSID
+		string "WiFi SSID"
+		depends on WIFI_STATION
+		help
+			"Hardcoded WiFi SSID."
+				
+	config WIFI_PASSWD
+		string "WiFi Password"
+		depends on WIFI_STATION
+		help
+			"Hardcoded WiFi password."
+    
+	menuconfig OTA_UPDATE
+		bool "OTA Update"
+		depends on WIFI_STATION
+		help
+			"Add support for OTA firmware update over WiFi."
 
-	endmenu
+	config OTA_SERVER_FQDN
+		string "OTA Server FQDN"
+		depends on OTA_UPDATE
+		default "ota.acme.com"
+		help
+			"The FQDN (or IPv4 address) of the remote OTA server."
 
-	menu "Main Task"
+	config OTA_TCP_PORT
+		int "OTA TCP Port"
+		depends on OTA_UPDATE
+		range 1024 65536
+		default 8070
+		help
+			"The TCP port for the HTTPS connection to the remote
+			OTA server."
+		
+ 	config OTA_TASK_PRIO
+		int "OTA Update task priority"
+		depends on OTA_UPDATE
+		range 0 24
+		default 10
+		help
+			"The priority of the OTA Update task. The valid range is: 
+			0 to (configMAX_PRIORITIES-1)."
+
+	config OTA_TASK_STACK
+		int "OTA Update task stack size"
+		depends on OTA_UPDATE
+		range 5120 8192
+		default 5120
+		help
+			"The stack size of the OTA Update task."
  
- 		config MAIN_TASK_PRIO
-			int "Main task priority"
-			range 0 24
-			default 10
-			help
-				"The priority of the app's main task, spawned by app_main()
-				during start up.
-				The valid range is: 0 to (configMAX_PRIORITIES-1)."
+ 	menuconfig APP_MAIN_TASK
+ 		bool "App Main Task"
+ 		default y
+		help
+			"Have app_main() spawn the event-driven appMainTask, and exit."
+ 	
+ 	config MAIN_TASK_PRIO
+		int "Main task priority"
+		depends on APP_MAIN_TASK
+		range 0 24
+		default 10
+		help
+			"The priority of the app's main task, spawned by app_main()
+			during start up.
+			The valid range is: 0 to (configMAX_PRIORITIES-1)."
 	    		   
-		config MAIN_TASK_STACK
-			int "Main task stack size"
-			range 3072 8192
-			default 4096
-			help
-				"The stack size of the app's main task,
-				spawned by app_main() during start up."
-	    		   
-	endmenu
+	config MAIN_TASK_STACK
+		int "Main task stack size"
+		depends on APP_MAIN_TASK
+		range 3072 8192
+		default 4096
+		help
+			"The stack size of the app's main task, spawned by app_main() 
+			during start up."
+				
+	config MAIN_TASK_TICK_PERIOD
+		int "Main task tick period"
+		depends on APP_MAIN_TASK
+		range 0 10000
+		default 1000
+		help
+			"The period (in milliseconds) of the main task's tick
+			event.  The value should be a multiple of the system's
+			clock tick period, as defined by FREERTOS_HZ, which is
+			usually 10 ms. The value 0 indicates that no tick events
+			be generated."
     
 endmenu
 

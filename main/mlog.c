@@ -10,9 +10,9 @@
 #include "fgc.h"
 #include "mlog.h"
 
-#define USE_MICROSECOND_RESOLUTION  0
+#ifdef CONFIG_MSG_LOG
 
-#if !USE_MICROSECOND_RESOLUTION
+#if !CONFIG_MSG_LOG_MICROSEC_TIMESTAMP
 static __inline__ unsigned int usToMs(unsigned int us)
 {
     unsigned int ms = us / 1000;
@@ -25,7 +25,6 @@ static __inline__ unsigned int usToMs(unsigned int us)
 static const char *logLevelName[] = {
     [none] = "",
     [info] = "INFO",
-    [dump] = "DUMP",
     [trace] = GREEN_FGC "TRACE" RESET_FGC,
     [debug] = CYAN_FGC "DEBUG" RESET_FGC,
     [warning] = YELLOW_FGC "WARNING" RESET_FGC,
@@ -34,7 +33,6 @@ static const char *logLevelName[] = {
     [fatal] = RED_FGC "FATAL" RESET_FGC,
 };
 
-static bool usTimestamp = false;
 static LogDest msgLogDest = console;
 static LogLevel msgLogLevel = trace;
 static FILE *logFile = NULL;
@@ -51,18 +49,18 @@ static const char *fmtTimestamp(void)
 
     gettimeofday(&now, NULL);
     now.tv_sec += appConfigInfo.utcOffset * 3600;   // adjust based on UTC offset
-    if (usTimestamp) {
-        n = strftime(tsBuf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
-        snprintf((tsBuf + n), (bufLen - n), ".%06u", (unsigned) now.tv_usec);
-    } else {
-        unsigned int ms = usToMs(now.tv_usec);
-        if (ms >= 1000) {
-            now.tv_sec += 1;
-            ms -= 1000;
-        }
-        n = strftime(tsBuf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
-        snprintf((tsBuf + n), (bufLen - n), ".%03u", ms);
+#if CONFIG_MSG_LOG_MICROSEC_TIMESTAMP
+    n = strftime(tsBuf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
+    snprintf((tsBuf + n), (bufLen - n), ".%06u", (unsigned) now.tv_usec);
+#else
+   unsigned int ms = usToMs(now.tv_usec);
+   if (ms >= 1000) {
+       now.tv_sec += 1;
+       ms -= 1000;
     }
+    n = strftime(tsBuf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
+    snprintf((tsBuf + n), (bufLen - n), ".%03u", ms);
+#endif
 
     return tsBuf;
 }
@@ -152,3 +150,24 @@ LogLevel msgLogGetLevel(void)
 {
     return msgLogLevel;
 }
+#else
+int msgLogInit(bool usTimestamp)
+{
+    return 0;
+}
+
+LogDest msgLogSetDest(LogDest logDest)
+{
+    return logDest;
+}
+
+LogLevel msgLogSetLevel(LogLevel logLevel)
+{
+    return none;
+}
+
+LogLevel msgLogGetLevel(void)
+{
+    return none;
+}
+#endif  // CONFIG_MSG_LOG

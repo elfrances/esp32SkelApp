@@ -9,13 +9,27 @@ void getSerialNumber(SerialNumber *sn)
     memcpy(sn->digits, (macAddr+2), 4);
 }
 
+#ifdef CONFIG_APP_MAIN_TASK
 // This is the app's main task
 void appMainTask(void *parms)
 {
     while (true) {
+        TickType_t startTicks, elapsedTicks;
+        const TickType_t loopPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_TICK_PERIOD);
+
+        startTicks = xTaskGetTickCount();
+
         mlog(trace, "Hello world!");
-        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        elapsedTicks = xTaskGetTickCount() - startTicks;
+
+        if (elapsedTicks < loopPeriodTicks) {
+            // Sleep until the next poll period...
+            TickType_t delayTicks = loopPeriodTicks - elapsedTicks;
+            vTaskDelay(delayTicks);
+        }
     }
 
     vTaskDelete(NULL);
 }
+#endif
