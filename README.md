@@ -61,11 +61,15 @@ Next run the ESP-IDF menuconfig command and select the desired options in the "S
 Finally, add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_TICK_PERIOD.
 
 
-# BLE Peripheral
+# BLE Peripheral Feature
 
-When the BLE Peripheral feature is enabled in the sdkconfig, the app creates the standard Bluetooth SIG "Device Information Service", which is used to report the app's serial number, firmware version, etc.
+**esp32SkelApp** operates as a BLE peripheral device that advertises itself under the name "SKELAPP-NNNN", where NNNN are four hex digits derived from the serial number of the device.
 
-It also creates a custom "Device Configuration Service" using the reserved 16-bit UUID 0xFE00.  This service can be used to manually configure the WiFi credentials, set the UTC offset, perform a firmware upgrade, restart the device, etc.  This service can be accessed using a generic BLE explorer app, such as [LightBlue](https://punchthrough.com/lightblue/) or by using a custom-designed iOS/Android app.
+It advertises the following BLE services:
+
+1. The standard Bluetooth SIG "Device Information Service", which is used to report the app's serial number, firmware version, etc.
+
+2. A custom "Device Configuration Service" using the reserved 16-bit UUID 0xFE00.  This service can be used to manually configure the WiFi credentials, set the UTC offset, perform a firmware upgrade, restart the device, etc.  This service can be accessed using a generic BLE explorer app, such as [LightBlue](https://punchthrough.com/lightblue/) or by using a custom-designed iOS/Android app.
 
 The Device Configuration Service supports the following characteristics:
 
@@ -73,9 +77,13 @@ The Device Configuration Service supports the following characteristics:
 
 This characteristic is used to manually set the WiFi credentials. The value is a UTF-8 string that includes the SSID and Password strings concatenated together, and including their null charactes.
 
+For example, if the SSID is "HomeSweetHome" and the Password is "TopSecret!", the UTF-8 string would be: 48 6F 6D 65 53 77 65 65 74 48 6F 6D 65 00 54 6F 70 53 65 63 72 65 74 21 00.
+
 ### FE02: WiFi IP Address
 
-This read-only characteristic is used to obtain the IPv4 address assigned to the ESP32-C3 device.  It is a UINT32 value that encodes the IPv4 address in network-byte order; i.e. first byte is the MSB and last byte is the LSB.
+This read-only characteristic is used to obtain the IPv4 address assigned to the ESP32-C3 device.  It consists of four UINT8 values that encode the IPv4 address in network-byte order.
+
+For example, the address 192.168.0.16 would be encoded as: C0 A8 00 10. 
 
 ### FE03: Command Request
 
