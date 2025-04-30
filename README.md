@@ -104,9 +104,12 @@ The following screenshots show the iOS LightBlue app connected to the ESP32-C3 d
 
 ![LightBlue-1](/assets/IMG_5381.PNG)
 
+
 ![LightBlue-2](/assets/IMG_5382.PNG)
 
+
 ![LightBlue-3](/assets/IMG_5383.PNG)
+
 
 ![LightBlue-4](/assets/IMG_5384.PNG)
 
