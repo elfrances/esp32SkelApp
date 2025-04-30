@@ -1,295 +1,289 @@
-menu "Skeletal App Configuration"
+menu "SkelApp Configuration"
 
-	orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
  
- 	menuconfig RGB_LED
- 		bool "RGB LED"
- 		default y
- 		help
- 			"When enabled the firmware includes support for
- 			the on-board RGB LED."
- 				   
-	config RGB_LED_GPIO
-		int "RGB LED GPIO number"
-		depends on RGB_LED
-		range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
-		default 5 if IDF_TARGET_ESP32
-		default 8 if IDF_TARGET_ESP32C3
-		default 48 if IDF_TARGET_ESP32S3
-		default 8
-		help
-			"GPIO pin number used to control the RGB LED."
-	            
-	config RGB_LED_TASK_PRIO
-		int "RGB LED task priority"
-		depends on RGB_LED
-		range 0 24
-		default 24
-		help
-			"The priority of the task that manages the RGB LED.
+     menuconfig RGB_LED
+         bool "RGB LED"
+         default y
+         help
+             "When enabled the firmware includes support for
+             the on-board RGB LED."
+                    
+    config RGB_LED_GPIO
+        int "RGB LED GPIO number"
+        depends on RGB_LED
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 5 if IDF_TARGET_ESP32
+        default 8 if IDF_TARGET_ESP32C3
+        default 48 if IDF_TARGET_ESP32S3
+        default 8
+        help
+            "GPIO pin number used to control the RGB LED."
+                
+    config RGB_LED_TASK_PRIO
+        int "RGB LED task priority"
+        depends on RGB_LED
+        range 0 24
+        default 24
+        help
+            "The priority of the task that manages the RGB LED.
                          The valid range is: 0 to (configMAX_PRIORITIES-1).
                          The RGB LED task consumes little CPU, so it is OK
                          to give it a high priority to keep the LED blinking
                          rate accurate."
-	
-	menuconfig MSG_LOG
-		bool "Message Logging"
-		default y
-		help
-			"When enabled the firmware includes support for
-			message logging to the console or a file."
-			
-	choice MSG_LOG_LEVEL
-        	prompt "Message Log Level"
-		default MSG_LOG_LEVEL_INFO
-		help
-			"Defines the default message log level."
-
-		config MSG_LOG_LEVEL_NONE
-			bool "No logging"
-		config MSG_LOG_LEVEL_INFO
-			bool "Informational"
-		config MSG_LOG_LEVEL_TRACE 
-			bool "Code tracing"
-		config MSG_LOG_LEVEL_DEBUG 
-			bool "Code debugging"
-		depends on MSG_LOG
-	endchoice
-	
-	config MSG_LOG_LEVEL
-		int
-		default 0 if MSG_LOG_LEVEL_NONE 
-		default 1 if MSG_LOG_LEVEL_INFO
-		default 2 if MSG_LOG_LEVEL_TRACE 
-		default 3 if MSG_LOG_LEVEL_DEBUG 
-	
-	choice MSG_LOG_DEST
-        	prompt "Message Log Destination"
-		default MSG_LOG_DEST_CONSOLE
-		help
-			"Defines the default message log destination."
-
-		config MSG_LOG_DEST_CONSOLE
-			bool "Console"
-		config MSG_LOG_DEST_FILE
-			bool "File"
-		config MSG_LOG_DEST_BOTH 
-			bool "Console and File"
-		depends on MSG_LOG
-	endchoice
-	
-	config MSG_LOG_DEST
-		int
-		default 1 if MSG_LOG_DEST_BOTH
-		default 2 if MSG_LOG_DEST_CONSOLE
-		default 3 if MSG_LOG_DEST_FILE
-		
-	config MSG_LOG_MICROSEC_TIMESTAMP
-		bool "Microsecond timestamp"
-		depends on MSG_LOG
-		default n
-		help
-			"When enabled the timestamp in the message logs
-			has microsecond resolution."
-			
-	config MSG_LOG_MAX_LEN
-		int "Max length of a log message"
-		depends on MSG_LOG
-		default 256
-		help
-			"Indicates the maximum length of a log message.
-			Used to dimension the memory buffer where the
-			text is formatted."
-		
-	menuconfig BLE_PERIPHERAL
-		bool "BLE Peripheral"
-		depends on BT_NIMBLE_ENABLED
-		default y
-		help
-			"When enabled the firmware includes BLE peripheral functionality
-			to allow a mobile app to connect to the device."
-				
-	config BLE_HOST_TASK_PRIO
-		int "BLE Host task priority"
-		depends on BLE_PERIPHERAL
-		range 0 24
-		default 24
-		help
-			"The priority of the task that runs the BLE Host stack.
-			The valid range is: 0 to (configMAX_PRIORITIES-1)."
-				
-	config BLE_ADV_NAME
-		string "BLE advertised name"
-		depends on BLE_PERIPHERAL
-		default "SKELAPP"
-		help
-			"The name sent in the BLE advertisements."
-
-	config DEVICE_INFO_SERVICE
-		bool "Device Information Service"
-		depends on BLE_PERIPHERAL
-		default y
-		help
-			"When enabled the firmware includes the standard Device Information
-			Service."
-								
-	config MANUFACTURER_NAME
-		string "Manufacturer name"
-		depends on DEVICE_INFO_SERVICE
-		default "Acme Corporation"
-		help
-			"The string used as the Manufacturer Name in the Device Information
-			Service."
-				
-	config MODEL_NUMBER
-		string "Model number"
-		depends on DEVICE_INFO_SERVICE
-		default "SkelApp"
-		help
-			"The string used as the Model Number in the Device Information
-			Service."
-	
-	menuconfig WIFI_STATION
-		bool "WiFi Station"
-		depends on ESP_WIFI_ENABLED
-		default y
-		help
-			"When enabled the firmware includes WiFi station functionality
-			to allow the device to connect to the Internet."
     
-	config WPS
-		bool "WiFi Protected Setup (WPS)"
-		depends on WIFI_STATION
-		default y
-		help
-			"Adds support for WiFi Protected Setup (WPS) to auto configure the 
-			WiFi credentials using the WiFi router."
-				
-	config WIFI_SSID
-		string "WiFi SSID"
-		depends on WIFI_STATION
-		help
-			"Hardcoded WiFi SSID."
-				
-	config WIFI_PASSWD
-		string "WiFi Password"
-		depends on WIFI_STATION
-		help
-			"Hardcoded WiFi password."
-    
-	menuconfig OTA_UPDATE
-		bool "OTA Update"
-		depends on WIFI_STATION
-		help
-			"Add support for OTA firmware update over WiFi."
-
-	config OTA_SERVER_FQDN
-		string "OTA Server FQDN"
-		depends on OTA_UPDATE
-		default "ota.acme.com"
-		help
-			"The FQDN (or IPv4 address) of the remote OTA server."
-
-	config OTA_TCP_PORT
-		int "OTA TCP Port"
-		depends on OTA_UPDATE
-		range 1024 65536
-		default 8070
-		help
-			"The TCP port for the HTTPS connection to the remote
-			OTA server."
-		
- 	config OTA_TASK_PRIO
-		int "OTA Update task priority"
-		depends on OTA_UPDATE
-		range 0 24
-		default 10
-		help
-			"The priority of the OTA Update task. The valid range is: 
-			0 to (configMAX_PRIORITIES-1)."
-
-	config OTA_TASK_STACK
-		int "OTA Update task stack size"
-		depends on OTA_UPDATE
-		range 5120 8192
-		default 5120
-		help
-			"The stack size of the OTA Update task."
+    menuconfig MSG_LOG
+        bool "Message Logging"
+        default y
+        help
+            "When enabled the firmware includes support for
+            message logging to the console or a file."
  
- 	menuconfig APP_MAIN_TASK
- 		bool "App Main Task"
- 		default y
-		help
-			"Have the ESP-IDF app_main() spawn the event-driven appMainTask, 
-			and exit."
- 	
- 	config MAIN_TASK_PRIO
-		int "Main task priority"
-		depends on APP_MAIN_TASK
-		range 0 24
-		default 10
-		help
-			"The priority of the app's main task, spawned by app_main()
-			during start up.
-			The valid range is: 0 to (configMAX_PRIORITIES-1)."
-	    		   
-	config MAIN_TASK_STACK
-		int "Main task stack size"
-		depends on APP_MAIN_TASK
-		range 3072 8192
-		default 4096
-		help
-			"The stack size of the app's main task, spawned by app_main() 
-			during start up."
-			
-	choice MAIN_TASK_CPU
-        	prompt "Main task CPU affinity"
-		default MAIN_TASK_CPU_NO_AFFINITY
-		help
-			"The CPU core of the app's main task."
+    choice MSG_LOG_LEVEL
+        prompt "Message Log Level"
+        depends on MSG_LOG
+        config MSG_LOG_LEVEL_NONE
+            bool "No logging"
+        config MSG_LOG_LEVEL_INFO
+            bool "Informational"
+        config MSG_LOG_LEVEL_TRACE 
+            bool "Code tracing"
+        config MSG_LOG_LEVEL_DEBUG 
+            bool "Code debugging"
+    endchoice
+    
+    config MSG_LOG_LEVEL
+        int
+        depends on MSG_LOG
+        default 0 if MSG_LOG_LEVEL_NONE 
+        default 1 if MSG_LOG_LEVEL_INFO
+        default 2 if MSG_LOG_LEVEL_TRACE 
+        default 3 if MSG_LOG_LEVEL_DEBUG
 
-		config MAIN_TASK_CPU_NO_AFFINITY
-			bool "No affinity"
-		config MAIN_TASK_CPU_CORE0
-			bool "CPU0"
-		config MAIN_TASK_CPU_CORE1 
-			bool "CPU1"
-		depends on !FREERTOS_UNICORE
-	endchoice
-				
-	config MAIN_TASK_CPU
-		hex
-		default FREERTOS_NO_AFFINITY if MAIN_TASK_CPU_NO_AFFINITY
-		default 0x0 if MAIN_TASK_CPU_CORE0
-		default 0x1 if MAIN_TASK_CPU_CORE1
-				
-	config MAIN_TASK_TICK_PERIOD
-		int "Main task tick period"
-		depends on APP_MAIN_TASK
-		range 0 10000
-		default 1000
-		help
-			"The period (in milliseconds) of the main task's tick
-			event.  The value should be a multiple of the system's
-			clock tick period, as defined by FREERTOS_HZ, which is
-			usually 10 ms. The value 0 indicates that no tick events
-			be generated."
+    choice MSG_LOG_DEST
+        prompt "Message Log Destination"
+        depends on MSG_LOG
+        config MSG_LOG_DEST_CONSOLE
+            bool "Console"
+        config MSG_LOG_DEST_FILE
+            bool "File"
+        config MSG_LOG_DEST_BOTH 
+            bool "Console and File"
+    endchoice
+    
+     config MSG_LOG_DEST
+        int
+        depends on MSG_LOG
+        default 1 if MSG_LOG_DEST_BOTH
+        default 2 if MSG_LOG_DEST_CONSOLE
+        default 3 if MSG_LOG_DEST_FILE
+        
+    config MSG_LOG_MICROSEC_TIMESTAMP
+        bool "Microsecond timestamp"
+        depends on MSG_LOG
+        default n
+        help
+            "When enabled the timestamp in the message logs
+            has microsecond resolution."
+            
+    config MSG_LOG_MAX_LEN
+        int "Max length of a log message"
+        depends on MSG_LOG
+        default 256
+        help
+            "Indicates the maximum length of a log message.
+            Used to dimension the memory buffer where the
+            text is formatted."
+        
+    menuconfig BLE_PERIPHERAL
+        bool "BLE Peripheral"
+        depends on BT_NIMBLE_ENABLED
+        default y
+        help
+            "When enabled the firmware includes BLE peripheral functionality
+            to allow a mobile app to connect to the device."
+                
+    config BLE_HOST_TASK_PRIO
+        int "BLE Host task priority"
+        depends on BLE_PERIPHERAL
+        range 0 24
+        default 24
+        help
+            "The priority of the task that runs the BLE Host stack.
+            The valid range is: 0 to (configMAX_PRIORITIES-1)."
+                
+    config BLE_ADV_NAME
+        string "BLE advertised name"
+        depends on BLE_PERIPHERAL
+        default "SKELAPP"
+        help
+            "The name sent in the BLE advertisements."
 
-	menuconfig FAT_FS
-		bool "FAT File System"
-		default y
-		help
-			"Create a FAT file system using the 'storage' partition
-			in flash memory."
-			
-	config FAT_FS_MAX_FILES
-		int "Max number of files"
-		depends on FAT_FS
-		range 1 256
-		default 4
-		help
-			"Specifies the maximum number of files that can be stored
-			in the FAT FS."
-			
+    config DEVICE_INFO_SERVICE
+        bool "Device Information Service"
+        depends on BLE_PERIPHERAL
+        default y
+        help
+            "When enabled the firmware includes the standard Device Information
+            Service."
+                                
+    config MANUFACTURER_NAME
+        string "Manufacturer name"
+        depends on DEVICE_INFO_SERVICE
+        default "Acme Corporation"
+        help
+            "The string used as the Manufacturer Name in the Device Information
+            Service."
+                
+    config MODEL_NUMBER
+        string "Model number"
+        depends on DEVICE_INFO_SERVICE
+        default "SkelApp"
+        help
+            "The string used as the Model Number in the Device Information
+            Service."
+    
+    menuconfig WIFI_STATION
+        bool "WiFi Station"
+        depends on ESP_WIFI_ENABLED
+        default y
+        help
+            "When enabled the firmware includes WiFi station functionality
+            to allow the device to connect to the Internet."
+    
+    config WPS
+        bool "WiFi Protected Setup (WPS)"
+        depends on WIFI_STATION
+        default y
+        help
+            "Adds support for WiFi Protected Setup (WPS) to auto configure the 
+            WiFi credentials using the WiFi router."
+                
+    config WIFI_SSID
+        string "WiFi SSID"
+        depends on WIFI_STATION
+        help
+            "Hardcoded WiFi SSID."
+                
+    config WIFI_PASSWD
+        string "WiFi Password"
+        depends on WIFI_STATION
+        help
+            "Hardcoded WiFi password."
+    
+    menuconfig OTA_UPDATE
+        bool "OTA Update"
+        depends on WIFI_STATION
+        help
+            "Add support for OTA firmware update over WiFi."
+
+    config OTA_SERVER_FQDN
+        string "OTA Server FQDN"
+        depends on OTA_UPDATE
+        default "ota.acme.com"
+        help
+            "The FQDN (or IPv4 address) of the remote OTA server."
+
+    config OTA_TCP_PORT
+        int "OTA TCP Port"
+        depends on OTA_UPDATE
+        range 1024 65536
+        default 8070
+        help
+            "The TCP port for the HTTPS connection to the remote
+            OTA server."
+        
+     config OTA_TASK_PRIO
+        int "OTA Update task priority"
+        depends on OTA_UPDATE
+        range 0 24
+        default 10
+        help
+            "The priority of the OTA Update task. The valid range is: 
+            0 to (configMAX_PRIORITIES-1)."
+
+    config OTA_TASK_STACK
+        int "OTA Update task stack size"
+        depends on OTA_UPDATE
+        range 5120 8192
+        default 5120
+        help
+            "The stack size of the OTA Update task."
+ 
+     menuconfig APP_MAIN_TASK
+         bool "App Main Task"
+         default y
+        help
+            "Have the ESP-IDF app_main() spawn the event-driven appMainTask, 
+            and exit."
+     
+     config MAIN_TASK_PRIO
+        int "Main task priority"
+        depends on APP_MAIN_TASK
+        range 0 24
+        default 10
+        help
+            "The priority of the app's main task, spawned by app_main()
+            during start up.
+            The valid range is: 0 to (configMAX_PRIORITIES-1)."
+                   
+    config MAIN_TASK_STACK
+        int "Main task stack size"
+        depends on APP_MAIN_TASK
+        range 3072 8192
+        default 4096
+        help
+            "The stack size of the app's main task, spawned by app_main() 
+            during start up."
+            
+    choice MAIN_TASK_CPU
+            prompt "Main task CPU affinity"
+        default MAIN_TASK_CPU_NO_AFFINITY
+        help
+            "The CPU core of the app's main task."
+
+        config MAIN_TASK_CPU_NO_AFFINITY
+            bool "No affinity"
+        config MAIN_TASK_CPU_CORE0
+            bool "CPU0"
+        config MAIN_TASK_CPU_CORE1 
+            bool "CPU1"
+        depends on !FREERTOS_UNICORE
+    endchoice
+                
+    config MAIN_TASK_CPU
+        hex
+        default FREERTOS_NO_AFFINITY if MAIN_TASK_CPU_NO_AFFINITY
+        default 0x0 if MAIN_TASK_CPU_CORE0
+        default 0x1 if MAIN_TASK_CPU_CORE1
+                
+    config MAIN_TASK_TICK_PERIOD
+        int "Main task tick period"
+        depends on APP_MAIN_TASK
+        range 0 10000
+        default 1000
+        help
+            "The period (in milliseconds) of the main task's tick
+            event.  The value should be a multiple of the system's
+            clock tick period, as defined by FREERTOS_HZ, which is
+            usually 10 ms. The value 0 indicates that no tick events
+            be generated."
+
+    menuconfig FAT_FS
+        bool "FAT File System"
+        default y
+        help
+            "Create a FAT file system using the 'storage' partition
+            in flash memory."
+            
+    config FAT_FS_MAX_FILES
+        int "Max number of files"
+        depends on FAT_FS
+        range 1 256
+        default 4
+        help
+            "Specifies the maximum number of files that can be stored
+            in the FAT FS."
+            
 endmenu
 
