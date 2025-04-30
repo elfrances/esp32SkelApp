@@ -35,16 +35,30 @@ Creates a FAT file system using the 'storage' partition in the flash memory.
 
 Let's assume the app your are developing is called "myNewApp".
 
+1. Download the code from GitHub and unzip it:
+
 ```
-git clone https://github.com/elfrances/esp32SkelApp.git
-rm -rf esp32SkelApp/.git
-mv esp32SkelApp myNewApp
+wget https://github.com/elfrances/esp32SkelApp/archive/refs/heads/main.zip
+unzip main.zip
+```
+
+2. Rename the top level directory from "esp32SkelApp-main" to "myNewApp":
+
+```
+mv esp32SkelApp-main myNewApp
+```
+3. Fix the project name in the top-level CMakeLists.txt file:
+
+```
 sed -i s'/esp32SkelApp/myNewApp/' myNewApp/CMakeLists.txt
 ```
 
-Run the ESP-IDF menuconfig command and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting.
+Next run the ESP-IDF menuconfig command and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting.
 
-Add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_TICK_PERIOD.
+> [!IMPORTANT]
+> Some of the settings in the "Skeletal App Configuration" section depend on ESP-IDF "Component config" settings. For example, you won't be able to enable the BLE Peripheral setting unless the Bluetooth feature is enabled.
+
+Finally, add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_TICK_PERIOD.
 
 
 # BLE Peripheral
@@ -86,13 +100,15 @@ the firmware would print the following messages on the terminal when it boots up
 
 ![Skeletal-App-Running](/assets/Skeletal-App-Running.png) 
 
-The following screenshots show the iOS LightBlue app connected to the ESP32-C3 device running the **esp32SkelApp**:
+The following screenshots show the iOS LightBlue app connected to the ESP32-C3 device that's running the **esp32SkelApp**:
 
-![LightBlue-1](/assets/IMG_5374.PNG)
+![LightBlue-1](/assets/IMG_5381.PNG)
 
-![LightBlue-2](/assets/IMG_5375.PNG)
+![LightBlue-2](/assets/IMG_5382.PNG)
 
-![LightBlue-3](/assets/IMG_5376.PNG)
+![LightBlue-3](/assets/IMG_5383.PNG)
+
+![LightBlue-4](/assets/IMG_5384.PNG)
 
 
 
