@@ -51,8 +51,7 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
 #define GATT_DEVICE_CONFIG_UUID             0xFE00
 #define GATT_WIFI_CREDENTIALS_UUID              0xFE01  // READ, WRITE
 #define GATT_WIFI_IP_ADDRESS_UUID               0xFE02  // READ
-#define GATT_UTC_OFFSET_UUID                    0xFE03  // READ, WRITE
-#define GATT_COMMAND_UUID                       0xFE04  // READ, WRITE
+#define GATT_COMMAND_UUID                       0xFE03  // READ, WRITE
 
 static int getWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
 {
@@ -105,31 +104,6 @@ static int getWiFiIpAddress(struct ble_gatt_access_ctxt *ctxt)
     return (os_mbuf_append(ctxt->om, &wifiConfigInfo->wifiIpAddr, sizeof (wifiConfigInfo->wifiIpAddr)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
-static int getUtcOffset(struct ble_gatt_access_ctxt *ctxt)
-{
-    return (os_mbuf_append(ctxt->om, &appConfigInfo.utcOffset, sizeof (appConfigInfo.utcOffset)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
-}
-
-static int setUtcOffset(struct ble_gatt_access_ctxt *ctxt)
-{
-    struct os_mbuf *om = ctxt->om;
-    int8_t utcOffset;
-
-    if ((om == NULL) || (om->om_len != 1)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
-    }
-
-    utcOffset = (int8_t) om->om_data[0];
-    if ((utcOffset < -12) || (utcOffset > 12)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
-    }
-
-    appConfigInfo.utcOffset = utcOffset;
-    nvramWrite(&appConfigInfo);
-    mlog(trace, "utcOffset=%d", utcOffset);
-
-    return 0;
-}
 
 typedef enum CmdOpCode {
     coNoOp = 0,
@@ -137,6 +111,7 @@ typedef enum CmdOpCode {
     coClearConfig,
     coStartOtaUpdate,
     coSetLogLevel,
+    coSetUtcOffset,
     coMax
 } CmdOpCode;
 
@@ -181,12 +156,39 @@ static CmdStatus startOtaUpdateCmd(struct os_mbuf *om)
 
 static CmdStatus setLogLevelCmd(struct os_mbuf *om)
 {
-    LogLevel logLevel = om->om_data[1];
+    LogLevel logLevel;
+
+    if ((om == NULL) || (om->om_len != 2)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    logLevel = om->om_data[1];
     if (logLevel > debug) {
         return csInvParam;
     }
     msgLogSetLevel(logLevel);
+
     return csSuccess;
+}
+
+static int setUtcOffsetCmd(struct os_mbuf *om)
+{
+    int8_t utcOffset;
+
+    if ((om == NULL) || (om->om_len != 2)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    utcOffset = (int8_t) om->om_data[1];
+    if ((utcOffset < -12) || (utcOffset > 12)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    appConfigInfo.utcOffset = utcOffset;
+    nvramWrite(&appConfigInfo);
+    mlog(trace, "utcOffset=%d", utcOffset);
+
+    return 0;
 }
 
 static int runCmd(struct ble_gatt_access_ctxt *ctxt)
@@ -227,6 +229,10 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
         cmdStatus = setLogLevelCmd(om);
         break;
 
+    case coSetUtcOffset:
+        cmdStatus = setUtcOffsetCmd(om);
+        break;
+
     default:
         cmdStatus = csInvOpCode;
         break;
@@ -247,12 +253,6 @@ static int deviceConfigCb(uint16_t conn_handle, uint16_t attr_handle, struct ble
         }
     } else if (uuid == GATT_WIFI_IP_ADDRESS_UUID) {
         return getWiFiIpAddress(ctxt);
-    } else if (uuid == GATT_UTC_OFFSET_UUID) {
-        if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
-            return getUtcOffset(ctxt);
-        } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
-            return setUtcOffset(ctxt);
-        }
     } else if (uuid == GATT_COMMAND_UUID) {
         if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
             return getCmdStatus(ctxt);
@@ -325,13 +325,7 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
                 .flags = BLE_GATT_CHR_F_READ,
             },
             {
-                // UTC Offset
-                .uuid = BLE_UUID16_DECLARE(GATT_UTC_OFFSET_UUID),
-                .access_cb = deviceConfigCb,
-                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE
-            },
-            {
-                // Command
+                // Command Request
                 .uuid = BLE_UUID16_DECLARE(GATT_COMMAND_UUID),
                 .access_cb = deviceConfigCb,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE

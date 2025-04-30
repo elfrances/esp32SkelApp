@@ -325,6 +325,11 @@ int wifiConnect(WiFiConfigInfo *confInfo)
         confInfo->wifiIpAddr = 0;
         confInfo->wifiGwAddr = 0;
 
+        // Make the LED blue and blink 4x per second to
+        // indicate that we are connecting to the WiFi
+        // network.
+        ledSet(blink4, blue);
+
         // Let's get this party going!
         if ((rc = esp_wifi_start()) != ESP_OK) {
             mlog(error, "esp_wifi_start: rc=0x%04x", rc);

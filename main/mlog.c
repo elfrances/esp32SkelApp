@@ -24,7 +24,7 @@ static __inline__ unsigned int usToMs(unsigned int us)
 #endif
 
 static const char *logLevelName[] = {
-    [none] = "",
+    [none] = "NONE",
     [info] = "INFO",
     [trace] = GREEN_FGC "TRACE" RESET_FGC,
     [debug] = CYAN_FGC "DEBUG" RESET_FGC,
