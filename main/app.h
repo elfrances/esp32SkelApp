@@ -12,7 +12,11 @@ typedef struct AppConfigInfo {
 
 } AppConfigInfo;
 
+// This is the app's configuration info
 extern AppConfigInfo appConfigInfo;
+
+// Mount path for the Flash FATFS
+extern const char *fatFsMountPath;
 
 typedef struct SerialNumber {
     uint8_t digits[4];

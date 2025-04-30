@@ -2,6 +2,14 @@
 #include "esp32.h"
 #include "mlog.h"
 
+// This is the app's configuration info
+AppConfigInfo appConfigInfo;
+
+#ifdef CONFIG_FAT_FS
+// Mount path for the FAT Flash File System
+const char *fatFsMountPath = "/fatfs";
+#endif
+
 void getSerialNumber(SerialNumber *sn)
 {
     uint8_t macAddr[6];
@@ -10,7 +18,8 @@ void getSerialNumber(SerialNumber *sn)
 }
 
 #ifdef CONFIG_APP_MAIN_TASK
-// This is the app's main task
+// This is the app's main task. It runs an infinite work
+// loop, keeping a constant loop interval.
 void appMainTask(void *parms)
 {
     while (true) {

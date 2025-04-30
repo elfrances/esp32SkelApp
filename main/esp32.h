@@ -20,7 +20,9 @@
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
+#include "esp_vfs.h"
 #include "esp_vfs_dev.h"
+#include "esp_vfs_fat.h"
 #if (CONFIG_ESP_WIFI_ENABLED)
 #include "esp_wifi.h"
 #include "esp_wps.h"

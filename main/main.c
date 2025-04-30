@@ -6,8 +6,6 @@
 #include "nvram.h"
 #include "wifi.h"
 
-AppConfigInfo appConfigInfo;
-
 #ifdef CONFIG_WIFI_STATION
 // Configure SNTP and get the current date and time
 static int sntpInit(void)
@@ -34,6 +32,43 @@ static int sntpInit(void)
 }
 #endif  // CONFIG_WIFI_STATION
 
+#ifdef CONFIG_FAT_FS
+// Handle of the Wear Leveling API
+static wl_handle_t wlHandle = WL_INVALID_HANDLE;
+
+static int fatFsInit(void)
+{
+    const esp_vfs_fat_mount_config_t fatFsMountConfig = {
+        .max_files = CONFIG_FAT_FS_MAX_FILES,
+        .format_if_mount_failed = true,
+        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
+    };
+    esp_err_t err;
+    uint64_t totalBytes, freeBytes;
+
+    if ((err = esp_vfs_fat_spiflash_mount_rw_wl(fatFsMountPath, "storage", &fatFsMountConfig, &wlHandle)) != ESP_OK) {
+        mlog(error, "Failed to mount FATFS: %s", esp_err_to_name(err));
+        return -1;
+    }
+
+    if ((err = esp_vfs_fat_info(fatFsMountPath, &totalBytes, &freeBytes)) != ESP_OK) {
+        mlog(error, "Failed to get FATFS info: %s", esp_err_to_name(err));
+        return -1;
+    }
+
+    mlog(trace, "Total: %" PRIu64 " bytes, Free: %" PRIu64 " bytes", totalBytes, freeBytes);
+
+    if (freeBytes == 0) {
+        mlog(warning, "No space available in FATFS!");
+    }
+
+    return 0;
+}
+#endif
+
+
+// This function is called by the ESP-IDF "main" task during
+// system start up.
 void app_main(void)
 {
     const esp_app_desc_t *appDesc = esp_app_get_description();
@@ -127,6 +162,13 @@ void app_main(void)
     // Save the WiFi credentials
     if (nvramWrite(&appConfigInfo) != 0) {
         mlog(fatal, "Can't save app's config info!");
+    }
+#endif  // CONFIG_WIFI_STATION
+
+#ifdef CONFIG_FAT_FS
+    // Init the FAT FS
+    if (fatFsInit() != 0) {
+        mlog(fatal, "Failed to init FATFS!");
     }
 #endif
 

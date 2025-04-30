@@ -220,7 +220,8 @@ menu "Skeletal App Configuration"
  		bool "App Main Task"
  		default y
 		help
-			"Have app_main() spawn the event-driven appMainTask, and exit."
+			"Have the ESP-IDF app_main() spawn the event-driven appMainTask, 
+			and exit."
  	
  	config MAIN_TASK_PRIO
 		int "Main task priority"
@@ -273,6 +274,22 @@ menu "Skeletal App Configuration"
 			clock tick period, as defined by FREERTOS_HZ, which is
 			usually 10 ms. The value 0 indicates that no tick events
 			be generated."
-    
+
+	menuconfig FAT_FS
+		bool "FAT File System"
+		default y
+		help
+			"Create a FAT file system using the 'storage' partition
+			in flash memory."
+			
+	config FAT_FS_MAX_FILES
+		int "Max number of files"
+		depends on FAT_FS
+		range 1 256
+		default 4
+		help
+			"Specifies the maximum number of files that can be stored
+			in the FAT FS."
+			
 endmenu
 

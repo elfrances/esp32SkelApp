@@ -8,6 +8,7 @@
 #include "app.h"
 #include "esp32.h"
 #include "fgc.h"
+#include "led.h"
 #include "mlog.h"
 
 #ifdef CONFIG_MSG_LOG
@@ -96,6 +97,11 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
         }
         if ((msgLogDest == both) || (msgLogDest == file)) {
             fprintf(logFile, "%s\n", msgLogBuf);
+        }
+
+        if (logLevel == fatal) {
+            ledSet(on, red);
+            assert(false);
         }
 
         xSemaphoreGive(mutexHandle);
