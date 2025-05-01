@@ -4,25 +4,30 @@
 #include "led.h"
 #include "mlog.h"
 #include "nvram.h"
+#include "timeval.h"
 #include "wifi.h"
 
-#ifdef CONFIG_WIFI_STATION
+#if CONFIG_WIFI_NTP
 // Configure SNTP and get the current date and time
 static int sntpInit(void)
 {
+    struct timeval now;
+
+    gettimeofday(&now, NULL);
+
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
-
-    // pool.ntp.org is a large cluster of NTP servers
-    // distributed all over the world...
-    esp_sntp_setservername(0, "pool.ntp.org");
-
+    esp_sntp_setservername(0, CONFIG_WIFI_NTP_SERVER);
     esp_sntp_init();
 
     // Wait up to 10 sec to get the current ToD
     for (int i = 0; i < 100; i++) {
         usleep(100000); // 100 ms
         if (sntp_get_sync_status() == SNTP_SYNC_STATUS_COMPLETED) {
-            // Done!
+            // Done! Now update the baseTime value used to
+            // generate relative timestamps.
+            struct timeval newNow;
+            gettimeofday(&newNow, NULL);
+            tvSub(&baseTime, &newNow, &now);
             mlog(info, "Date and time set!");
             return 0;
         }
@@ -30,7 +35,7 @@ static int sntpInit(void)
 
     return -1;
 }
-#endif  // CONFIG_WIFI_STATION
+#endif  // CONFIG_WIFI_NTP
 
 #ifdef CONFIG_FAT_FS
 // Handle of the Wear Leveling API
@@ -91,6 +96,11 @@ void app_main(void)
     vTaskDelay(pdMS_TO_TICKS(5000));
 #endif
 
+    // Set the base time and ticks
+    gettimeofday(&baseTime, NULL);
+    baseTicks = xTaskGetTickCount();
+
+#ifdef CONFIG_MSG_LOG
     // Initialize the message logging API. Notice that at
     // this point NTP has not set the correct date & time
     // yet, therefore the timestamps will be based on the
@@ -99,6 +109,7 @@ void app_main(void)
         printf("SPONG! Failed to init msgLog API!\n");
         return;
     }
+#endif
 
     // Initialize the LED API
     if (ledInit() != 0) {
@@ -153,11 +164,13 @@ void app_main(void)
         mlog(fatal, "wifiInit!");
     }
 
+#if CONFIG_WIFI_NTP
     // Now that we are connected to the network, set
-    // the date and time.
+    // the current date and time.
     if (sntpInit() != 0) {
         mlog(warning, "Failed to set date and time!");
     }
+#endif
 
     // Save the WiFi credentials
     if (nvramWrite(&appConfigInfo) != 0) {

@@ -67,33 +67,46 @@ menu "SkelApp Configuration"
             bool "Console"
         config MSG_LOG_DEST_FILE
             bool "File"
+            depends on FAT_FS
         config MSG_LOG_DEST_BOTH 
             bool "Console and File"
+            depends on FAT_FS
     endchoice
     
-     config MSG_LOG_DEST
+    config MSG_LOG_DEST
         int
         depends on MSG_LOG
         default 1 if MSG_LOG_DEST_BOTH
         default 2 if MSG_LOG_DEST_CONSOLE
         default 3 if MSG_LOG_DEST_FILE
         
-    config MSG_LOG_MICROSEC_TIMESTAMP
-        bool "Microsecond timestamp"
+    choice MSG_LOG_TIMESTAMP
+        prompt "Message Log Timestamp"
         depends on MSG_LOG
-        default n
-        help
-            "When enabled the timestamp in the message logs
-            has microsecond resolution."
+        config MSG_LOG_TS_UPTIME_USEC
+            bool "Up-time (HH:MM:SS.usec)"
+        config MSG_LOG_TS_UPTIME_MSEC
+            bool "Up-time HH:MM:SS.msec"
+        config MSG_LOG_TS_TOD_USEC 
+            bool "Date and Time (usec)"
+            depends on WIFI_NTP
+        config MSG_LOG_TS_TOD_MSEC 
+            bool "Date and Time (msec)"
+            depends on WIFI_NTP
+    endchoice
+        
+    config MSG_LOG_TIMESTAMP
+        bool
+        depends on MSG_LOG
+        default MSG_LOG_TS_UPTIME_MSEC
             
     config MSG_LOG_MAX_LEN
-        int "Max length of a log message"
+        int "Max Length of Message Text"
         depends on MSG_LOG
         default 256
         help
-            "Indicates the maximum length of a log message.
-            Used to dimension the memory buffer where the
-            text is formatted."
+            "Indicates the maximum length of the text in a single log message.
+            Used to dimension the memory buffer where the text is formatted."
         
     menuconfig BLE_PERIPHERAL
         bool "BLE Peripheral"
@@ -170,6 +183,21 @@ menu "SkelApp Configuration"
         depends on WIFI_STATION
         help
             "Hardcoded WiFi password."
+
+    config WIFI_NTP
+        bool "Network Time Protocol"
+        depends on WIFI_STATION
+        default y
+        help
+            "Use NTP to obtain the current date and time."
+            
+    config WIFI_NTP_SERVER
+        string "NTP Server"
+        depends on WIFI_NTP
+        default "pool.ntp.org"
+        help
+            "Specifies the FQDN of the NTP server to use to set the
+            current date and time."
     
     menuconfig OTA_UPDATE
         bool "OTA Update"
@@ -214,8 +242,7 @@ menu "SkelApp Configuration"
          bool "App Main Task"
          default y
         help
-            "Have the ESP-IDF app_main() spawn the event-driven appMainTask, 
-            and exit."
+            "Have app_main() spawn the event-driven appMainTask, and exit."
      
      config MAIN_TASK_PRIO
         int "Main task priority"
@@ -237,7 +264,8 @@ menu "SkelApp Configuration"
             during start up."
             
     choice MAIN_TASK_CPU
-            prompt "Main task CPU affinity"
+        prompt "Main task CPU affinity"
+        depends on APP_MAIN_TASK
         default MAIN_TASK_CPU_NO_AFFINITY
         help
             "The CPU core of the app's main task."
@@ -248,26 +276,25 @@ menu "SkelApp Configuration"
             bool "CPU0"
         config MAIN_TASK_CPU_CORE1 
             bool "CPU1"
-        depends on !FREERTOS_UNICORE
+        
     endchoice
                 
     config MAIN_TASK_CPU
         hex
+        depends on APP_MAIN_TASK
         default FREERTOS_NO_AFFINITY if MAIN_TASK_CPU_NO_AFFINITY
         default 0x0 if MAIN_TASK_CPU_CORE0
         default 0x1 if MAIN_TASK_CPU_CORE1
                 
-    config MAIN_TASK_TICK_PERIOD
-        int "Main task tick period"
+    config MAIN_TASK_WAKEUP_PERIOD
+        int "Main task wakeup period"
         depends on APP_MAIN_TASK
-        range 0 10000
         default 1000
         help
-            "The period (in milliseconds) of the main task's tick
+            "The period (in milliseconds) of the main task's wakeup
             event.  The value should be a multiple of the system's
             clock tick period, as defined by FREERTOS_HZ, which is
-            usually 10 ms. The value 0 indicates that no tick events
-            be generated."
+            usually 10 ms."
 
     menuconfig FAT_FS
         bool "FAT File System"

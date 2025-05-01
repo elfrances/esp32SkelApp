@@ -10,18 +10,9 @@
 #include "fgc.h"
 #include "led.h"
 #include "mlog.h"
+#include "timeval.h"
 
 #ifdef CONFIG_MSG_LOG
-
-#if !CONFIG_MSG_LOG_MICROSEC_TIMESTAMP
-static __inline__ unsigned int usToMs(unsigned int us)
-{
-    unsigned int ms = us / 1000;
-    if ((us % 1000) >= 500)
-        ms++;
-    return ms;
-}
-#endif
 
 static const char *logLevelName[] = {
     [none] = "NONE",
@@ -40,6 +31,50 @@ static FILE *logFile = NULL;
 static SemaphoreHandle_t mutexHandle;
 static StaticSemaphore_t mutexSem;
 
+#if CONFIG_MSG_LOG_TS_UPTIME_USEC
+static const char *fmtTimestamp(void)
+{
+    struct timeval now, deltaT;
+    unsigned dd, hh, mm, ss, us;
+    static char tsBuf[32];  // DD HH:MM:SS.uuuuuu
+    size_t bufLen = sizeof (tsBuf);
+
+    gettimeofday(&now, NULL);
+    tvSub(&deltaT, &now, &baseTime);
+    ss = deltaT.tv_sec;
+    dd = ss / 86400;
+    ss -= dd * 86400;
+    hh = ss / 3600;
+    ss -= hh * 3600;
+    mm = ss / 60;
+    ss -= mm * 60;
+    us = deltaT.tv_usec;
+    snprintf(tsBuf, bufLen, "%02u %02u:%02u:%02u.%06u", dd, hh, mm, ss, us);
+
+    return tsBuf;
+}
+#elif CONFIG_MSG_LOG_TS_UPTIME_MSEC
+static const char *fmtTimestamp(void)
+{
+    TickType_t now = xTaskGetTickCount();
+    unsigned ticks = now - baseTicks;
+    unsigned dd, hh, mm, ss, ms;
+    static char tsBuf[32];  // DD HH:MM:SS.mmm
+    size_t bufLen = sizeof (tsBuf);
+
+    ss = pdTICKS_TO_MS(ticks) / 1000;
+    dd = ss / 86400;
+    ss -= dd * 86400;
+    hh = ss / 3600;
+    ss -= hh * 3600;
+    mm = ss / 60;
+    ss -= mm * 60;
+    ms = pdTICKS_TO_MS(ticks) % 1000;
+    snprintf(tsBuf, bufLen, "%02u %02u:%02u:%02u.%03u", dd, hh, mm, ss, ms);
+
+    return tsBuf;
+}
+#else
 static const char *fmtTimestamp(void)
 {
     struct timeval now;
@@ -50,21 +85,21 @@ static const char *fmtTimestamp(void)
 
     gettimeofday(&now, NULL);
     now.tv_sec += appConfigInfo.utcOffset * 3600;   // adjust based on UTC offset
-#if CONFIG_MSG_LOG_MICROSEC_TIMESTAMP
     n = strftime(tsBuf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
+#if CONFIG_MSG_LOG_TS_TOD_USEC
     snprintf((tsBuf + n), (bufLen - n), ".%06u", (unsigned) now.tv_usec);
 #else
-   unsigned int ms = usToMs(now.tv_usec);
+   unsigned int ms = now.tv_usec / 1000;
    if (ms >= 1000) {
        now.tv_sec += 1;
        ms -= 1000;
     }
-    n = strftime(tsBuf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
     snprintf((tsBuf + n), (bufLen - n), ".%03u", ms);
 #endif
 
     return tsBuf;
 }
+#endif
 
 static char msgLogBuf[CONFIG_MSG_LOG_MAX_LEN];
 
@@ -122,7 +157,7 @@ int msgLogInit(LogLevel defLogLevel, LogDest defLogDest)
     // Reset the terminal's foreground color highlighting
     fprintf(stdout, "%s\n", RESET_FGC);
 
-    mlog(info, "Message logging enabled");
+    mlog(info, "Message logging enabled: level=%s", logLevelName[defLogLevel]);
 
     return 0;
 }
@@ -132,15 +167,20 @@ LogDest msgLogSetDest(LogDest logDest)
     LogDest prevLogDest = msgLogDest;
     if ((msgLogDest = logDest) != prevLogDest) {
         if ((msgLogDest == console) && (logFile != NULL)) {
+            // Close the log file as we don't need it anymore
             fclose(logFile);
             logFile = NULL;
         } else if (prevLogDest == console) {
+            // Open the log file
             time_t now = time(NULL);
             struct tm brkDwnTime;
-            char logFileName[128];
+            char logFileName[64];
+            int n;
             // Log file name: "YYYY-MM-DDTHH:MM:SS.txt"
-            strftime(logFileName, sizeof (logFileName), "%Y-%m-%dT%H:%M:%S.txt", gmtime_r(&now, &brkDwnTime));
-            logFile = fopen(logFileName, "w");
+            now += appConfigInfo.utcOffset * 3600;   // adjust based on UTC offset
+            n = snprintf(logFileName, sizeof (logFileName), "%s/", fatFsMountPath);
+            strftime((logFileName + n), (sizeof (logFileName) - n), "%Y-%m-%dT%H:%M:%S.txt", gmtime_r(&now, &brkDwnTime));
+            logFile = fopen(logFileName, "w+");
         }
     }
     return prevLogDest;

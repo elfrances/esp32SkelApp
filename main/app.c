@@ -10,6 +10,10 @@ AppConfigInfo appConfigInfo;
 const char *fatFsMountPath = "/fatfs";
 #endif
 
+// Base (reference) time and ticks
+struct timeval baseTime;
+TickType_t baseTicks;
+
 void getSerialNumber(SerialNumber *sn)
 {
     uint8_t macAddr[6];
@@ -19,12 +23,13 @@ void getSerialNumber(SerialNumber *sn)
 
 #ifdef CONFIG_APP_MAIN_TASK
 // This is the app's main task. It runs an infinite work
-// loop, keeping a constant loop interval.
+// loop, keeping a constant wakeup interval.
 void appMainTask(void *parms)
 {
+    const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
+
     while (true) {
         TickType_t startTicks, elapsedTicks;
-        const TickType_t loopPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_TICK_PERIOD);
 
         startTicks = xTaskGetTickCount();
 
@@ -32,9 +37,9 @@ void appMainTask(void *parms)
 
         elapsedTicks = xTaskGetTickCount() - startTicks;
 
-        if (elapsedTicks < loopPeriodTicks) {
+        if (elapsedTicks < wakeupPeriodTicks) {
             // Sleep until the next poll period...
-            TickType_t delayTicks = loopPeriodTicks - elapsedTicks;
+            TickType_t delayTicks = wakeupPeriodTicks - elapsedTicks;
             vTaskDelay(delayTicks);
         }
     }

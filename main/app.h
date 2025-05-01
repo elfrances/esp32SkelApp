@@ -3,6 +3,7 @@
 #include <sys/cdefs.h>
 #include <stdint.h>
 
+#include "esp32.h"
 #include "wifi.h"
 
 // App configuration info
@@ -17,6 +18,10 @@ extern AppConfigInfo appConfigInfo;
 
 // Mount path for the Flash FATFS
 extern const char *fatFsMountPath;
+
+// Base (reference) time and ticks
+extern struct timeval baseTime;
+extern TickType_t baseTicks;
 
 typedef struct SerialNumber {
     uint8_t digits[4];
