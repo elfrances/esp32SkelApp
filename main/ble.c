@@ -111,6 +111,7 @@ typedef enum CmdOpCode {
     coClearConfig,
     coStartOtaUpdate,
     coSetLogLevel,
+    coSetUtcTime,
     coSetUtcOffset,
     coMax
 } CmdOpCode;
@@ -171,6 +172,18 @@ static CmdStatus setLogLevelCmd(struct os_mbuf *om)
     return csSuccess;
 }
 
+static int setUtcTimeCmd(struct os_mbuf *om)
+{
+    struct timeval utcTime = {0};
+
+    if ((om == NULL) || (om->om_len != 5)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    utcTime.tv_sec = (om->om_data[1] << 24) | (om->om_data[2] << 16) | (om->om_data[3] << 8) | om->om_data[4];
+    return (settimeofday(&utcTime, NULL) == 0) ? csSuccess : csFailed;
+}
+
 static int setUtcOffsetCmd(struct os_mbuf *om)
 {
     int8_t utcOffset;
@@ -227,6 +240,10 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
 
     case coSetLogLevel:
         cmdStatus = setLogLevelCmd(om);
+        break;
+
+    case coSetUtcTime:
+        cmdStatus = setUtcTimeCmd(om);
         break;
 
     case coSetUtcOffset:
