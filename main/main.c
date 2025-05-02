@@ -1,3 +1,6 @@
+#include <dirent.h>
+#include <stdlib.h>
+
 #include "app.h"
 #include "ble.h"
 #include "esp32.h"
@@ -43,6 +46,7 @@ static wl_handle_t wlHandle = WL_INVALID_HANDLE;
 
 static int fatFsInit(void)
 {
+    const char *mountPath = "/fatfs";
     const esp_vfs_fat_mount_config_t fatFsMountConfig = {
         .max_files = CONFIG_FAT_FS_MAX_FILES,
         .format_if_mount_failed = true,
@@ -50,13 +54,14 @@ static int fatFsInit(void)
     };
     esp_err_t err;
     uint64_t totalBytes, freeBytes;
+    char fileName[272];
 
-    if ((err = esp_vfs_fat_spiflash_mount_rw_wl(fatFsMountPath, "storage", &fatFsMountConfig, &wlHandle)) != ESP_OK) {
+    if ((err = esp_vfs_fat_spiflash_mount_rw_wl(mountPath, "storage", &fatFsMountConfig, &wlHandle)) != ESP_OK) {
         mlog(error, "Failed to mount FATFS: %s", esp_err_to_name(err));
         return -1;
     }
 
-    if ((err = esp_vfs_fat_info(fatFsMountPath, &totalBytes, &freeBytes)) != ESP_OK) {
+    if ((err = esp_vfs_fat_info(mountPath, &totalBytes, &freeBytes)) != ESP_OK) {
         mlog(error, "Failed to get FATFS info: %s", esp_err_to_name(err));
         return -1;
     }
@@ -65,6 +70,66 @@ static int fatFsInit(void)
 
     if (freeBytes == 0) {
         mlog(warning, "No space available in FATFS!");
+    }
+
+    // Publish it!
+    fatFsMountPath = (char *) mountPath;
+
+    if (CONFIG_FAT_FS_LIST_FILES) {
+        DIR *dir;
+        struct dirent *dirEnt;
+
+        // List the contents of the FATFS
+        if ((dir = opendir(fatFsMountPath)) == NULL) {
+            mlog(errNo, "Failed to open directory");
+            return -1;
+        }
+
+        printf("\n");
+        printf("     Name     |  Size  \n");
+        printf("--------------+--------\n");
+        while ((dirEnt = readdir(dir)) != NULL) {
+            if (dirEnt->d_type == DT_REG) {
+                const char *dName = dirEnt->d_name;
+                struct stat fileStat;
+                snprintf(fileName, sizeof (fileName), "%s/%s", fatFsMountPath, dName);
+                if (stat(fileName, &fileStat) != 0) {
+                    mlog(errNo, "Failed to stat file %s", fileName);
+                    return -1;
+                }
+                printf(" %12s | %6ld \n", dName, fileStat.st_size);
+            }
+        }
+        printf("\n");
+
+        closedir(dir);
+    }
+
+#ifdef CONFIG_MSG_LOG_DUMP
+    {
+        FILE *fp;
+        snprintf(fileName, sizeof (fileName), "%s/mlog.txt", fatFsMountPath);
+        if ((fp = fopen(fileName, "r")) != NULL) {
+            char lineBuf[CONFIG_MSG_LOG_MAX_LEN];
+            int n = 0;
+            printf("### Dump of file mlog.txt ###\n");
+            while (fgets(lineBuf, sizeof (lineBuf), fp) != NULL) {
+                printf("FILE: %s", lineBuf);
+                if (++n == 10) {
+                    vTaskDelay(1);
+                    n = 0;
+                }
+            }
+            printf("### End of dump ###\n");
+            fclose(fp);
+        }
+    }
+#endif
+
+    // Now that the FAT FS is mounted, see if we need to
+    // re-set the log destination...
+    if ((CONFIG_MSG_LOG_DEST == both) || (CONFIG_MSG_LOG_DEST == file)) {
+        msgLogSetDest(CONFIG_MSG_LOG_DEST);
     }
 
     return 0;
@@ -101,11 +166,15 @@ void app_main(void)
     baseTicks = xTaskGetTickCount();
 
 #ifdef CONFIG_MSG_LOG
-    // Initialize the message logging API. Notice that at
-    // this point NTP has not set the correct date & time
-    // yet, therefore the timestamps will be based on the
-    // Epoch (1970-01-01 at 00:00:00) ...
-    if (msgLogInit(CONFIG_MSG_LOG_LEVEL, CONFIG_MSG_LOG_DEST) != 0) {
+    // Initialize the message logging API. Please note:
+    //
+    // 1 - At this point NTP has not set the correct date
+    // & time yet, therefore the ToD timestamps will be
+    // based on the Epoch (1970-01-01 at 00:00:00)
+    //
+    // 2 - At this point we can only log to the console,
+    // as the FAT FS is not initialized yet.
+    if (msgLogInit(CONFIG_MSG_LOG_LEVEL, console) != 0) {
         printf("SPONG! Failed to init msgLog API!\n");
         return;
     }

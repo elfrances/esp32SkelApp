@@ -10,7 +10,7 @@ menu "SkelApp Configuration"
              the on-board RGB LED."
                     
     config RGB_LED_GPIO
-        int "RGB LED GPIO number"
+        int "RGB LED GPIO Number"
         depends on RGB_LED
         range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
         default 5 if IDF_TARGET_ESP32
@@ -21,16 +21,16 @@ menu "SkelApp Configuration"
             "GPIO pin number used to control the RGB LED."
                 
     config RGB_LED_TASK_PRIO
-        int "RGB LED task priority"
+        int "RGB LED Task Priority"
         depends on RGB_LED
         range 0 24
         default 24
         help
             "The priority of the task that manages the RGB LED.
-                         The valid range is: 0 to (configMAX_PRIORITIES-1).
-                         The RGB LED task consumes little CPU, so it is OK
-                         to give it a high priority to keep the LED blinking
-                         rate accurate."
+             The valid range is: 0 to (configMAX_PRIORITIES-1).
+             The RGB LED task consumes little CPU, so it is OK
+             to give it a high priority to keep the LED blinking
+             rate accurate."
     
     menuconfig MSG_LOG
         bool "Message Logging"
@@ -108,6 +108,14 @@ menu "SkelApp Configuration"
             "Indicates the maximum length of the text in a single log message.
             Used to dimension the memory buffer where the text is formatted."
         
+    config MSG_LOG_DUMP
+        bool "Message Log Dump"
+        depends on MSG_LOG && FAT_FS
+        default y
+        help
+            "When enabled the message log file is dumped to the console when
+            the system starts up." 
+            
     menuconfig BLE_PERIPHERAL
         bool "BLE Peripheral"
         depends on BT_NIMBLE_ENABLED
@@ -117,7 +125,7 @@ menu "SkelApp Configuration"
             to allow a mobile app to connect to the device."
                 
     config BLE_HOST_TASK_PRIO
-        int "BLE Host task priority"
+        int "BLE Host Task Priority"
         depends on BLE_PERIPHERAL
         range 0 24
         default 24
@@ -126,7 +134,7 @@ menu "SkelApp Configuration"
             The valid range is: 0 to (configMAX_PRIORITIES-1)."
                 
     config BLE_ADV_NAME
-        string "BLE advertised name"
+        string "BLE Advertised Name"
         depends on BLE_PERIPHERAL
         default "SKELAPP"
         help
@@ -141,7 +149,7 @@ menu "SkelApp Configuration"
             Service."
                                 
     config MANUFACTURER_NAME
-        string "Manufacturer name"
+        string "Manufacturer Name"
         depends on DEVICE_INFO_SERVICE
         default "Acme Corporation"
         help
@@ -149,7 +157,7 @@ menu "SkelApp Configuration"
             Service."
                 
     config MODEL_NUMBER
-        string "Model number"
+        string "Model Number"
         depends on DEVICE_INFO_SERVICE
         default "SkelApp"
         help
@@ -222,7 +230,7 @@ menu "SkelApp Configuration"
             OTA server."
         
      config OTA_TASK_PRIO
-        int "OTA Update task priority"
+        int "OTA Update Task Priority"
         depends on OTA_UPDATE
         range 0 24
         default 10
@@ -231,7 +239,7 @@ menu "SkelApp Configuration"
             0 to (configMAX_PRIORITIES-1)."
 
     config OTA_TASK_STACK
-        int "OTA Update task stack size"
+        int "OTA Update Task Stack Size"
         depends on OTA_UPDATE
         range 5120 8192
         default 5120
@@ -245,7 +253,7 @@ menu "SkelApp Configuration"
             "Have app_main() spawn the event-driven appMainTask, and exit."
      
      config MAIN_TASK_PRIO
-        int "Main task priority"
+        int "App Main Task Priority"
         depends on APP_MAIN_TASK
         range 0 24
         default 10
@@ -255,7 +263,7 @@ menu "SkelApp Configuration"
             The valid range is: 0 to (configMAX_PRIORITIES-1)."
                    
     config MAIN_TASK_STACK
-        int "Main task stack size"
+        int "App Main Task Stack Size"
         depends on APP_MAIN_TASK
         range 3072 8192
         default 4096
@@ -264,7 +272,7 @@ menu "SkelApp Configuration"
             during start up."
             
     choice MAIN_TASK_CPU
-        prompt "Main task CPU affinity"
+        prompt "App Main Task CPU Affinity"
         depends on APP_MAIN_TASK
         default MAIN_TASK_CPU_NO_AFFINITY
         help
@@ -287,7 +295,7 @@ menu "SkelApp Configuration"
         default 0x1 if MAIN_TASK_CPU_CORE1
                 
     config MAIN_TASK_WAKEUP_PERIOD
-        int "Main task wakeup period"
+        int "App Main Task Wakeup Period"
         depends on APP_MAIN_TASK
         default 1000
         help
@@ -304,13 +312,20 @@ menu "SkelApp Configuration"
             in flash memory."
             
     config FAT_FS_MAX_FILES
-        int "Max number of files"
+        int "File Limit"
         depends on FAT_FS
         range 1 256
         default 4
         help
             "Specifies the maximum number of files that can be stored
             in the FAT FS."
+    
+    config FAT_FS_LIST_FILES
+        bool "List Files"
+        depends on FAT_FS
+        default y
+        help
+            "When the system boots, list the files stored on the FAT FS."
             
 endmenu
 

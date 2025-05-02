@@ -16,8 +16,8 @@ typedef struct AppConfigInfo {
 // This is the app's configuration info
 extern AppConfigInfo appConfigInfo;
 
-// Mount path for the Flash FATFS
-extern const char *fatFsMountPath;
+// Mount path for the FAT FS
+extern char *fatFsMountPath;
 
 // Base (reference) time and ticks
 extern struct timeval baseTime;

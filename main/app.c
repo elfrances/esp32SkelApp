@@ -5,10 +5,8 @@
 // This is the app's configuration info
 AppConfigInfo appConfigInfo;
 
-#ifdef CONFIG_FAT_FS
-// Mount path for the FAT Flash File System
-const char *fatFsMountPath = "/fatfs";
-#endif
+// Mount path for the FAT FS
+char *fatFsMountPath = NULL;
 
 // Base (reference) time and ticks
 struct timeval baseTime;

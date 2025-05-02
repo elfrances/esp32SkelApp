@@ -25,9 +25,16 @@ static const char *logLevelName[] = {
     [fatal] = RED_FGC "FATAL" RESET_FGC,
 };
 
+static const char *logDestName[] = {
+    [undef] = "UNDEF",
+    [both] = "BOTH",
+    [console] = "CONSOLE",
+    [file] = "FILE",
+};
+
 static LogDest msgLogDest = console;
 static LogLevel msgLogLevel = trace;
-static FILE *logFile = NULL;
+static char logFileName[32];
 static SemaphoreHandle_t mutexHandle;
 static StaticSemaphore_t mutexSem;
 
@@ -131,7 +138,19 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
             fprintf(stdout, "%s\n", msgLogBuf);
         }
         if ((msgLogDest == both) || (msgLogDest == file)) {
-            fprintf(logFile, "%s\n", msgLogBuf);
+            FILE *fp;
+            if ((fp = fopen(logFileName, "a")) == NULL) {
+                fprintf(stderr, "SPONG! Failed to open log file! %s", strerror(errno));
+                assert(0);
+            }
+            if (fprintf(fp, "%s\n", msgLogBuf) < 0) {
+                // Running out of space on the FATFS is not fatal
+                if (errno != ENOSPC) {
+                    fprintf(stderr, "SPONG! Failed to write to log file! %s", strerror(errno));
+                    assert(0);
+                }
+            }
+            fclose(fp);
         }
 
         if (logLevel == fatal) {
@@ -166,22 +185,20 @@ LogDest msgLogSetDest(LogDest logDest)
 {
     LogDest prevLogDest = msgLogDest;
     if ((msgLogDest = logDest) != prevLogDest) {
-        if ((msgLogDest == console) && (logFile != NULL)) {
-            // Close the log file as we don't need it anymore
-            fclose(logFile);
-            logFile = NULL;
-        } else if (prevLogDest == console) {
-            // Open the log file
-            time_t now = time(NULL);
-            struct tm brkDwnTime;
-            char logFileName[64];
-            int n;
-            // Log file name: "YYYY-MM-DDTHH:MM:SS.txt"
-            now += appConfigInfo.utcOffset * 3600;   // adjust based on UTC offset
-            n = snprintf(logFileName, sizeof (logFileName), "%s/", fatFsMountPath);
-            strftime((logFileName + n), (sizeof (logFileName) - n), "%Y-%m-%dT%H:%M:%S.txt", gmtime_r(&now, &brkDwnTime));
-            logFile = fopen(logFileName, "w+");
+        if (prevLogDest == console) {
+            // Create the log file on the FATFS
+            FILE *fp;
+            snprintf(logFileName, sizeof (logFileName), "%s/%s", fatFsMountPath, "mlog.txt");
+            if ((fp = fopen(logFileName, "w+")) != NULL) {
+                // Close it
+                fclose(fp);
+            } else {
+                // Oops!
+                msgLogDest = prevLogDest;
+                mlog(errNo, "Failed to open log file: %s", logFileName);
+            }
         }
+        mlog(info, "New message logging destination is %s", logDestName[msgLogDest]);
     }
     return prevLogDest;
 }
