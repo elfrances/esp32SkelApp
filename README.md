@@ -9,7 +9,7 @@ Provides an API for controling the color and blinking rate of the RGB LED. For e
 
 ### Message Logging
 
-Provides an API for logging messages to the console or to a file.
+Provides an API for logging messages to the console or to a file on the flash FAT FS.
 
 ### BLE Peripheral
 
@@ -46,19 +46,31 @@ unzip main.zip
 
 ```
 mv esp32SkelApp-main myNewApp
+cd myNewApp
 ```
+
 3. Fix the project name in the top-level CMakeLists.txt file:
 
 ```
-sed -i s'/esp32SkelApp/myNewApp/' myNewApp/CMakeLists.txt
+sed -i s'/esp32SkelApp/myNewApp/' CMakeLists.txt
 ```
 
-Next run the ESP-IDF menuconfig command and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting.
+4. Use the sample sdkconfig.esp32c3 file to create the project's sdkconfig file:
+
+```
+cp sdkconfig.esp32c3 sdkconfig
+```
+
+5. Run the ESP-IDF menuconfig command and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting:
+
+```
+idf.py menuconfig
+```
 
 > [!IMPORTANT]
 > Some of the settings in the "Skeletal App Configuration" section depend on ESP-IDF "Component config" settings. For example, you won't be able to enable the BLE Peripheral setting unless the Bluetooth feature is enabled.
 
-Finally, add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_TICK_PERIOD.
+6. Add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_WAKEUP_PERIOD.
 
 
 # BLE Peripheral Feature
@@ -96,7 +108,10 @@ This characteristic is used to direct the ESP32-C3 device to execute a command. 
 | 0x02   | Clear Config | none |
 | 0x03   | OTA Firmware Update | none|
 | 0x04   | Set Message Logging Level | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
-| 0x05   | Set UTC Offset | {INT8: #hours } |
+| 0x05   | Set UTC Time | {UINT32: # seconds since the Epoch }
+| 0x06   | Set UTC Offset | {INT8: # hours east or west from GMT } |
+
+For example, to set the UTC Time to May 2, 2025, 13:10 the command request bytes would be: 05 67 F8 D9 B8.
 
 # Example
 
