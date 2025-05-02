@@ -229,7 +229,7 @@ void app_main(void)
         mlog(fatal, "wifiInit!");
     }
 
-    if (wifiConnect(&appConfigInfo.wifiConfigInfo) != 0) {
+    if (wifiConnect() != 0) {
         mlog(fatal, "wifiInit!");
     }
 

@@ -113,6 +113,7 @@ typedef enum CmdOpCode {
     coSetLogLevel,
     coSetUtcTime,
     coSetUtcOffset,
+    coSetWiFi,
     coMax
 } CmdOpCode;
 
@@ -204,6 +205,19 @@ static int setUtcOffsetCmd(struct os_mbuf *om)
     return 0;
 }
 
+static int setWiFiCmd(struct os_mbuf *om)
+{
+    bool enabled = false;
+
+    if ((om == NULL) || (om->om_len != 2)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    enabled = !!om->om_data[1];
+
+    return (wifiEnable(enabled) == 0) ? csSuccess : csFailed;
+}
+
 static int runCmd(struct ble_gatt_access_ctxt *ctxt)
 {
     struct os_mbuf *om = ctxt->om;
@@ -248,6 +262,10 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
 
     case coSetUtcOffset:
         cmdStatus = setUtcOffsetCmd(om);
+        break;
+
+    case coSetWiFi:
+        cmdStatus = setWiFiCmd(om);
         break;
 
     default:

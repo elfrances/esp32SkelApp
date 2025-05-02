@@ -6,6 +6,7 @@
 
 #ifdef CONFIG_WIFI_STATION
 
+static WiFiConfigInfo *confInfo = NULL;
 static TaskHandle_t callingTaskHandle = NULL;
 
 typedef enum WifiConnState {
@@ -17,13 +18,22 @@ typedef enum WifiConnState {
 
 static WifiConnState wifiConnState = wifiDisconnected;
 
+typedef enum WpsState {
+    wpsIdle = 0,
+    wpsInProg,
+    wpsSuccess,
+    wpsError,
+} WpsState;
+
+static WpsState wpsState = wpsIdle;
+
 #ifdef CONFIG_WPS
 static esp_wps_config_t wpsConfig = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
 static wifi_config_t wpsApCredentials[MAX_WPS_AP_CRED];
 static int numApCred = 0;
 #endif
 
-static void wifiClearCredentials(WiFiConfigInfo *confInfo)
+static void wifiClearCredentials(void)
 {
     memset(confInfo->wifiSsid, 0, sizeof (confInfo->wifiSsid));
     memset(confInfo->wifiPasswd, 0, sizeof (confInfo->wifiPasswd));
@@ -66,8 +76,6 @@ const char *fmtRssi(int8_t rssi)
 // NOTE: this handler runs in the context of the "sys_evt" task
 static void ipEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, void *evtData)
 {
-    WiFiConfigInfo *confInfo = arg;
-
     if (evtId == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *gotIp = evtData;
         confInfo->wifiIpAddr = gotIp->ip_info.ip.addr;
@@ -77,11 +85,15 @@ static void ipEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, voi
 
         inet_ntop(AF_INET, &confInfo->wifiIpAddr, ipBuf, sizeof (ipBuf));
         inet_ntop(AF_INET, &confInfo->wifiGwAddr, gwBuf, sizeof (gwBuf));
-        mlog(info, "Connected to router: ipAddr=%s gwAddr=%s", ipBuf, gwBuf);
+        mlog(info, "Connected to WiFi AP: ipAddr=%s gwAddr=%s mac=%s rssi=%s chan=%u", ipBuf, gwBuf, fmtLanMac(confInfo->wifiMac), fmtRssi(confInfo->rssi), confInfo->priChan);
 
         // Set the LED solid blue to indicate we are
         // connected to the network.
         ledSet(on, blue);
+
+#ifdef CONFIG_WPS
+        wpsState = wpsIdle;
+#endif
 
         // Wake up the task that triggered the WiFi
         // connection...
@@ -94,12 +106,11 @@ static void ipEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, voi
 // NOTE: this handler runs in the context of the "sys_evt" task
 static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, void *evtData)
 {
-    WiFiConfigInfo *confInfo = arg;
     static int connRetryCnt = 0;
     esp_err_t rc;
 
     if (evtId == WIFI_EVENT_STA_START) {
-        //mlog(trace, "WIFI_EVENT_STA_START: magic=0x%08" PRIx32 " wifiSsid=%s wifiPasswd=%s connRetryCnt=%d", confInfo->magic, confInfo->wifiSsid, confInfo->wifiPasswd, connRetryCnt);
+        //mlog(trace, "WIFI_EVENT_STA_START: wifiSsid=%s wifiPasswd=%s connRetryCnt=%d", confInfo->wifiSsid, confInfo->wifiPasswd, connRetryCnt);
 
         // Do we have valid credentials?
         if ((confInfo->wifiSsid[0] != '\0') && (confInfo->wifiPasswd[0] != '\0')) {
@@ -114,7 +125,7 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
             memcpy(wifiConfig.sta.password, confInfo->wifiPasswd, sizeof (wifiConfig.sta.password));
             esp_wifi_set_config(WIFI_IF_STA, &wifiConfig);
             if ((rc = esp_wifi_connect()) != 0) {
-                mlog(error, "esp_wifi_connect: rc=0x%04x", rc);
+                mlog(error, "esp_wifi_connect: rc=0x%04x connState=%d", rc, wifiConnState);
             }
         } else {
             // Make the LED magenta and blink 4x per second to
@@ -126,40 +137,46 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
             mlog(info, "Enabling WPS to get the WiFi credentials ...");
             esp_wifi_wps_enable(&wpsConfig);
             esp_wifi_wps_start(0);
+            wpsState = wpsInProg;
+            mlog(trace, "WPS started ...");
 #endif
         }
     } else if (evtId == WIFI_EVENT_STA_STOP) {
         //mlog(trace, "WIFI_EVENT_STA_STOP");
 #ifdef CONFIG_WPS
-        esp_wifi_wps_disable();
+        if (wpsState == wpsInProg) {
+            mlog(trace, "Disabling WPS ...");
+            esp_wifi_wps_disable();
+            wpsState = wpsIdle;
+        }
 #endif
     } else if (evtId == WIFI_EVENT_STA_CONNECTED) {
         int rssi = 0;
         wifi_second_chan_t secChan = 0;
         uint8_t priChan = 0;
 
-        //mlog(trace, "WIFI_EVENT_STA_CONNECTED");
-        wifiConnState = wifiConnected;
-        connRetryCnt = 0;
-
+        // Get the connection info
         esp_wifi_sta_get_rssi(&rssi);
         esp_wifi_get_channel(&priChan, &secChan);
         esp_wifi_get_mac(ESP_IF_WIFI_STA, confInfo->wifiMac);
-        mlog(info, "Connected to WiFi AP: rssi=%s, priChan=%u, mac=%s", fmtRssi(rssi), priChan, fmtLanMac(confInfo->wifiMac));
+        confInfo->rssi = rssi;
+        confInfo->priChan = priChan;
+        //mlog(trace, "Connected to WiFi AP: rssi=%s, priChan=%u, mac=%s", fmtRssi(confInfo->rssi), confInfo->priChan, fmtLanMac(confInfo->wifiMac));
+        wifiConnState = wifiConnected;
+        connRetryCnt = 0;
     } else if (evtId == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t *disconn = evtData;
         const uint8_t reason = disconn->reason;
         bool retry = true;
 
-        //mlog(trace, "WIFI_EVENT_STA_DISCONNECTED: magic=0x%08" PRIx32 " reason=%u", server->appConfInfo.magic, reason);
-        wifiConnState = wifiDisconnected;
+        //mlog(trace, "WIFI_EVENT_STA_DISCONNECTED: reason=%u", reason);
         if ((confInfo->wifiSsid[0] != '\0') && (confInfo->wifiPasswd[0] != '\0')) {
             if (connRetryCnt++ >= 3) {
                 // The saved WiFi credentials don't seem to work anymore,
                 // likely because the AP's SSID/Password has changed or
                 // the ESP32 device was moved to a different WiFi network.
                 mlog(warning, "Saved WiFi credentials are invalid !");
-                wifiClearCredentials(confInfo);
+                wifiClearCredentials();
                 connRetryCnt = 0;
             } else if (reason == WIFI_REASON_NO_AP_FOUND) {
                 // The saved SSID is not available
@@ -184,14 +201,19 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
                 mlog(warning, "Connection to WiFi AP dropped !");
             } else if (wifiConnState == wifiDisconnecting) {
                 mlog(info, "Successfully disconnected from WiFi AP !");
-                wifiConnState = wifiDisconnected;
                 connRetryCnt = 0;
                 retry = false;
+#ifdef CONFIG_WPS
+            } else if (((wpsState == wpsInProg) || (wpsState == wpsSuccess)) && (reason == WIFI_REASON_ASSOC_LEAVE)) {
+                // When we are using WPS to obtain the WiFi credentials we
+                // expect to get disconnected with reason=ASSOC_LEAVE, so
+                // we can ignore this event...
+#endif
             } else {
-                //mlog(warning, "Disconnected from WiFi AP: reason=%u", reason);
+                mlog(warning, "Disconnected from WiFi AP: reason=%u connState=%d wpsState=%d", reason, wifiConnState, wpsState);
             }
         } else {
-            mlog(warning, "Disconnected from WiFi AP: reason=%u", reason);
+            LogLevel logLevel = warning;
 #ifdef CONFIG_WPS
             // When using WPS to autoconfig the WiFi credentials, we may
             // get an ASSOC_LEAVE, AUTH_FAIL and 802_1X_AUTH_FAILED that
@@ -200,10 +222,14 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
             if ((reason == WIFI_REASON_ASSOC_LEAVE) ||
                 (reason == WIFI_REASON_AUTH_FAIL) ||
                 (reason == WIFI_REASON_802_1X_AUTH_FAILED)) {
+                logLevel = trace;
                 retry = false;
             }
 #endif
+            mlog(logLevel, "Disconnected from WiFi AP: reason=%u connState=%d wpsState=%d", reason, wifiConnState, wpsState);
         }
+
+        wifiConnState = wifiDisconnected;
 
         if (retry) {
             // Let's try again...
@@ -215,7 +241,7 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
         wifi_event_sta_wps_er_success_t *evt = (wifi_event_sta_wps_er_success_t *) evtData;
         wifi_config_t staConfig = {0};
 
-        //mlog(trace, "WIFI_EVENT_STA_WPS_ER_SUCCESS");
+        mlog(trace, "WIFI_EVENT_STA_WPS_ER_SUCCESS");
         if (evt == NULL) {
             // The WiFi AP returned a single set of credentials
             // and the ESP-IDF WPS API already configured them
@@ -239,25 +265,24 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
 
         mlog(info, "Got WPS credentials: SSID=\"%s\" PASS=\"%s\"", (char *) staConfig.sta.ssid, (char *) staConfig.sta.password);
 
-        // Don't need WPS anymore
-        esp_wifi_wps_disable();
-
         // Save the WiFi credentials we got via WPS
-        if (wifiSetCredentials(confInfo, (char *) staConfig.sta.ssid, (char *) staConfig.sta.password) == 0) {
-            // Try to connect with the WPS credentials...
-            esp_wifi_stop();
-            esp_wifi_start();
-        } else {
+        if (wifiSetCredentials((char *) staConfig.sta.ssid, (char *) staConfig.sta.password) != 0) {
             mlog(error, "Failed to save WPS credentials !");
         }
+
+        // Don't need WPS anymore
+        esp_wifi_wps_disable();
+        wpsState = wpsSuccess;
     } else if (evtId == WIFI_EVENT_STA_WPS_ER_FAILED) {
         mlog(error, "WIFI_EVENT_STA_WPS_ER_FAILED");
     } else if (evtId == WIFI_EVENT_STA_WPS_ER_TIMEOUT) {
+        // The WPS process timed out. Restart it to try again.
         mlog(warning, "WPS timeout: restarting WPS to try again ...");
-        // Restart the WPS process...
+        wpsState = wpsIdle;
         esp_wifi_wps_disable();
         esp_wifi_wps_enable(&wpsConfig);
         esp_wifi_wps_start(0);
+        wpsState = wpsInProg;
     } else if (evtId == WIFI_EVENT_STA_WPS_ER_PIN) {
         //mlog(trace, "WIFI_EVENT_STA_WPS_ER_PIN");
     } else if (evtId == WIFI_EVENT_STA_WPS_ER_PBC_OVERLAP) {
@@ -268,7 +293,7 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
     }
 }
 
-int wifiSetCredentials(WiFiConfigInfo *confInfo, const char *ssid, const char *passwd)
+int wifiSetCredentials(const char *ssid, const char *passwd)
 {
     size_t ssidLen, passLen;
 
@@ -282,29 +307,36 @@ int wifiSetCredentials(WiFiConfigInfo *confInfo, const char *ssid, const char *p
         return -1;
     }
 
-    wifiClearCredentials(confInfo);
+    wifiClearCredentials();
     memcpy(confInfo->wifiSsid, ssid, ssidLen);
     memcpy(confInfo->wifiPasswd, passwd, passLen);
 
     return 0;
 }
 
-int wifiInit(WiFiConfigInfo *confInfo)
+int wifiInit(WiFiConfigInfo *wifiConfigInfo)
 {
     if (esp_netif_create_default_wifi_sta() == NULL)
         return -1;
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    esp_wifi_init(&cfg);
+
+    if (esp_wifi_init(&cfg) != ESP_OK)
+        return -1;
 
     // Install WiFi event handler
-    esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifiEvtHandler, confInfo);
+    if (esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifiEvtHandler, NULL) != ESP_OK)
+        return -1;
 
     // Install IP config event handler
-    esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, ipEvtHandler, confInfo);
+    if (esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, ipEvtHandler, NULL) != ESP_OK)
+        return -1;
 
     // Set WiFi mode to "station"
-    esp_wifi_set_mode(WIFI_MODE_STA);
+    if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK)
+        return -1;
+
+    confInfo = wifiConfigInfo;
 
     // To override the WiFi credentials stored
     // in NVRAM, uncomment the following lines.
@@ -314,13 +346,13 @@ int wifiInit(WiFiConfigInfo *confInfo)
     return 0;
 }
 
-int wifiConnect(WiFiConfigInfo *confInfo)
+int wifiConnect(void)
 {
     esp_err_t rc = 0;
 
-    mlog(info, "Connecting to router over WiFi ...");
-
     if (wifiConnState == wifiDisconnected) {
+        mlog(info, "Connecting to WiFi AP ...");
+
         // Clear the current IP addresses
         confInfo->wifiIpAddr = 0;
         confInfo->wifiGwAddr = 0;
@@ -339,6 +371,8 @@ int wifiConnect(WiFiConfigInfo *confInfo)
         // Block until the connection attempt finishes
         callingTaskHandle = xTaskGetHandle(pcTaskGetName(NULL));
         vTaskSuspend(callingTaskHandle);
+    } else {
+        mlog(warning, "Connection request ignored: connState=%d", wifiConnState);
     }
 
     return 0;
@@ -357,6 +391,20 @@ int wifiDisconnect(void)
             mlog(error, "esp_wifi_disconnect: rc=0x%04x", rc);
             return -1;
         }
+    }
+
+    return 0;
+}
+
+int wifiEnable(bool enable)
+{
+    mlog(info, "%sabling WiFi ...", (enable) ? "En" : "Dis");
+
+    if (enable && (wifiConnState != wifiConnected)) {
+        return wifiConnect();
+    } else if (!enable) {
+        wifiConnState = wifiDisconnecting;
+        esp_wifi_stop();
     }
 
     return 0;

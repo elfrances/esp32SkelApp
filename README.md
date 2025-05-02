@@ -110,6 +110,7 @@ This characteristic is used to direct the ESP32-C3 device to execute a command. 
 | 0x04   | Set Message Logging Level | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
 | 0x05   | Set UTC Time | {UINT32: # seconds since the Epoch }
 | 0x06   | Set UTC Offset | {INT8: # hours east or west from GMT } |
+| 0x07   | WiFi | {UINT8: 0=Disabled, 1=Enabled}
 
 For example, to set the UTC Time to May 2, 2025, 13:10 the command request bytes would be: 05 67 F8 D9 B8.
 
