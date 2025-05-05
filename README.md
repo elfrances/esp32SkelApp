@@ -5,13 +5,16 @@ The optional features are configured using the "Skeletal App Configuration" sect
 
 ### RGB LED
 
-Provides an API for controling the color and blinking rate of the RGB LED. The table below describes a few uses of the RGB LED by the SkelApp":
+Provides an API for controling the color and mode of the RGB LED, to indicate relevant system events or states.  The supported colors are: black, blue, cyan, green, magenta, orange, purple, red, white, yellow.  The supporting modes are: solid on or blinking at 1, 2, or 4 times per second.
+
+The table below describes a few uses of the RGB LED by the SkelApp":
 
 | State | Color | Mode |
 | ------ | ------- | ---------- | 
 | Connecting to WiFi | Blue | 4 bps |
-| Connected to WiFi | Blue | solid |
+| WiFi Connection Established | Blue | solid |
 | Invalid WiFi Credentials | Magenta | 4 bps |
+| Inbound BLE Connection Established | Yelow | solid |
 | OTA Update In Progress | Cyan | 4 bps |
 | OTA Update Failure | Red | 4 bps |
 | Fatal Error | Red | solid |
