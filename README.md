@@ -87,7 +87,7 @@ idf.py menuconfig
 
 # BLE Peripheral Feature
 
-**esp32SkelApp** operates as a BLE peripheral device that advertises itself under the name "SKELAPP-NNNN", where NNNN are four hex digits derived from the serial number of the device.
+**SkelApp** operates as a BLE peripheral device that advertises itself under the name "SKELAPP-NNNN", where NNNN are four hex digits derived from the serial number of the device.
 
 It advertises the following BLE services:
 
@@ -99,9 +99,9 @@ The Device Configuration Service supports the following characteristics:
 
 ### FE01: WiFi Credentials
 
-This characteristic is used to manually set the WiFi credentials. The value is a UTF-8 string that includes the SSID and Password strings concatenated together, and including their null charactes.
+This characteristic is used to manually set the WiFi credentials. The value is a UTF-8 string that includes the SSID and Password strings concatenated together, using the character sequence "###" as a separator.
 
-For example, if the SSID is "HomeSweetHome" and the Password is "TopSecret!", the UTF-8 string would be: 48 6F 6D 65 53 77 65 65 74 48 6F 6D 65 00 54 6F 70 53 65 63 72 65 74 21 00.
+For example, if the SSID is "HomeSweetHome" and the Password is "TopSecret!", the UTF-8 string to be written would be: "HomeSweetHome###TopSecret!".
 
 ### FE02: WiFi IP Address
 
@@ -119,11 +119,12 @@ This characteristic is used to direct the ESP32-C3 device to execute a command. 
 | 0x01   | Restart Device | none |
 | 0x02   | Clear Config | none |
 | 0x03   | OTA Firmware Update | none|
-| 0x04   | Set Message Logging Level | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
-| 0x05   | Set UTC Time | {UINT32: # seconds since the Epoch }
-| 0x06   | Set UTC Offset | {INT8: # hours east or west from GMT } |
-| 0x07   | WiFi | {UINT8: 0=Disabled, 1=Enabled}
-| 0x08   | Dump MLOG File | none
+| 0x04   | Set MLOG Level | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
+| 0x05   | Set MLOG Destination | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
+| 0x06   | Set UTC Time | {UINT32: # seconds since the Epoch }
+| 0x07   | Set UTC Offset | {INT8: # hours east or west from GMT } |
+| 0x08   | WiFi | {UINT8: 0=Disabled, 1=Enabled}
+| 0x09   | Dump MLOG File | none
 
 For example, to set the UTC Time to May 2, 2025, 13:10 the command request bytes would be: 05 67 F8 D9 B8.
 
@@ -137,7 +138,7 @@ the firmware would print the following messages on the terminal when it boots up
 
 ![Skeletal-App-Running](/assets/Skeletal-App-Running.png) 
 
-The following screenshots show the iOS LightBlue app connected to the ESP32-C3 device that's running the **esp32SkelApp**:
+The following screenshots show the iOS LightBlue app connected to the ESP32-C3 device that's running the **SkelApp**:
 
 ![LightBlue-1](/assets/IMG_5381.PNG)
 
