@@ -26,10 +26,9 @@ static const char *logLevelName[] = {
 };
 
 static const char *logDestName[] = {
-    [undef] = "UNDEF",
-    [both] = "BOTH",
     [console] = "CONSOLE",
     [file] = "FILE",
+    [both] = "BOTH",
 };
 
 static LogDest msgLogDest = console;
@@ -202,7 +201,9 @@ LogDest msgLogSetDest(LogDest logDest)
             // Create the log file on the FATFS
             FILE *fp;
             if ((fp = fopen(mlogFilePath, "w+")) != NULL) {
-                // Close it
+                // MLOG.TXT file created/truncated. Now close
+                // it, as we'll open/write/close to it within
+                // msgLog() ...
                 fclose(fp);
             } else {
                 // Oops!
@@ -219,8 +220,8 @@ LogLevel msgLogSetLevel(LogLevel logLevel)
 {
     LogLevel prevLogLevel = msgLogLevel;
     if (logLevel != prevLogLevel) {
-        mlog(info, "New message logging level is %s", logLevelName[logLevel]);
         msgLogLevel = logLevel;
+        mlog(info, "New message logging level is %s", logLevelName[msgLogLevel]);
     }
     return prevLogLevel;
 }

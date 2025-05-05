@@ -117,7 +117,13 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
             wifi_config_t wifiConfig = {0};
 
             if (connRetryCnt == 0) {
-                mlog(info, "Connecting using saved WiFi config: SSID=\"%s\" PASS=\"%s\" ...", confInfo->wifiSsid, confInfo->wifiPasswd);
+                int passwdLen = strlen(confInfo->wifiPasswd);
+                char hiddenPasswd[passwdLen + 1];
+                for (int i = 0; i < (passwdLen - 1); i++) {
+                    hiddenPasswd[i] = '*';
+                }
+                hiddenPasswd[passwdLen - 1] = '\0';
+                mlog(info, "Connecting using saved WiFi config: SSID=\"%s\" PASS=\"%s\" ...", confInfo->wifiSsid, hiddenPasswd);
             }
 
             // Attempt to connect with the saved WiFi credentials

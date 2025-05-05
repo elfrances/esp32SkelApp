@@ -7,10 +7,9 @@
 #include "sdkconfig.h"
 
 typedef enum LogDest {
-    undef = 0,
-    both = 1,
-    console = 2,
-    file = 3,
+    console = 0,
+    file = 1,
+    both = 2,
 } LogDest;
 
 typedef enum LogLevel {

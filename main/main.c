@@ -107,7 +107,7 @@ static int fatFsInit(void)
 
 #ifdef CONFIG_MSG_LOG_DUMP
     // Dump the contents of the MLOG.TXT file
-    dumpMlogFile();
+    dumpMlogFile(false);
 #endif
 
     // Now that the FAT FS is mounted, see if we need to

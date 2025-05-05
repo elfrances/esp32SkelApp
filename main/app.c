@@ -51,7 +51,7 @@ int clearConfig(void)
     return nvramClear();
 }
 
-int dumpMlogFile(void)
+int dumpMlogFile(bool warn)
 {
 #ifdef CONFIG_FAT_FS
     FILE *fp;
@@ -75,7 +75,9 @@ int dumpMlogFile(void)
         printf("### End of dump ###\n\n");
 
         fclose(fp);
-    } else if (errno != ENOENT) {
+    } else if ((errno == ENOENT) && warn) {
+        mlog(info, "%s not available!", mlogFilePath);
+    } else {
         mlog(errNo, "Failed to open %s!", mlogFilePath);
         return -1;
     }

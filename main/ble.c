@@ -54,44 +54,60 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
 #define GATT_WIFI_IP_ADDRESS_UUID               0xFE02  // READ
 #define GATT_COMMAND_UUID                       0xFE03  // READ, WRITE
 
+// The WiFi Credentials data is a UTF-8 string that
+// includes the SSID and Password strings concatenated
+// using the character sequence "###" as a separator.
+// For example, if SSID="ABCDE" and Password="12345"
+// then the data read or written would be string:
+// "ABCDE###12345".
+
 static int getWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
 {
     const WiFiConfigInfo *wifiConfigInfo = &appConfigInfo.wifiConfigInfo;
-    uint8_t wifiCred[130];
-    size_t ssidLen = strlen(wifiConfigInfo->wifiSsid) + 1;
-    size_t passwdLen = strlen(wifiConfigInfo->wifiPasswd) + 1;
-    memcpy(wifiCred, wifiConfigInfo->wifiSsid, ssidLen);
-    memcpy((wifiCred + ssidLen), wifiConfigInfo->wifiPasswd, passwdLen);
-    return (os_mbuf_append(ctxt->om, wifiCred, (ssidLen + passwdLen)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+    char data[sizeof (wifiConfigInfo->wifiSsid) + 3 + sizeof (wifiConfigInfo->wifiPasswd)];
+    uint16_t len = snprintf(data, sizeof (data), "%s###%s", wifiConfigInfo->wifiSsid, wifiConfigInfo->wifiPasswd);
+    return (os_mbuf_append(ctxt->om, data, len) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
 static int setWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
 {
     WiFiConfigInfo *wifiConfigInfo = &appConfigInfo.wifiConfigInfo;
     struct os_mbuf *om = ctxt->om;
-    const char *s;
+    char *data;
+    uint16_t len;
+    char *ssid, *pass, *sep;
 
-    // The format of the WiFi credentials data is the
-    // SSID string followed by the Password string, in
-    // both cases including the terminating null char.
-    // For example, if SSID="ABC" and Password="123" the
-    // data written would be the 8-byte hex sequence:
-    // 41, 42, 43, 00, 31, 32, 33, 00.
-    if ((om == NULL) || (om->om_data == NULL) || (om->om_len > (sizeof (wifiConfigInfo->wifiSsid) + sizeof (wifiConfigInfo->wifiPasswd)))) {
+    if ((om == NULL) || (om->om_data == NULL) || (om->om_len <= 2)) {
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
 
-    s = (char *) om->om_data;
-    if (strlen(s) >= sizeof (wifiConfigInfo->wifiSsid)) {
+    data = (char *) om->om_data;
+    len = om->om_len;
+    if (len > (sizeof (wifiConfigInfo->wifiSsid) + sizeof (wifiConfigInfo->wifiPasswd) + 3)) {
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
-    strcpy(wifiConfigInfo->wifiSsid, s);
 
-    s += strlen(s) + 1;
-    if (strlen(s) >= sizeof (wifiConfigInfo->wifiPasswd)) {
+    ssid = data;
+    if ((sep = strstr(ssid, "###")) == NULL) {
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
-    strcpy(wifiConfigInfo->wifiPasswd, s);
+    *sep = '\0';    // null-terminate the SSID string
+
+    pass = sep + 3; // Password string follows the separator
+    len -= (strlen(ssid) + 3);
+    pass[len] = '\0';   // null-terminate the Password string
+
+    // Validate the individual string lengths
+    if (strlen(ssid) >= sizeof (wifiConfigInfo->wifiSsid)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+    if (strlen(pass) >= sizeof (wifiConfigInfo->wifiPasswd)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    strncpy(wifiConfigInfo->wifiSsid, ssid, sizeof (wifiConfigInfo->wifiSsid));
+    strncpy(wifiConfigInfo->wifiPasswd, pass, sizeof (wifiConfigInfo->wifiPasswd));
+    wifiConfigInfo->wifiPasswd[sizeof (wifiConfigInfo->wifiPasswd) - 1] = '\0';
 
     nvramWrite(&appConfigInfo);
     mlog(trace, "wifiSsid=%s wifiPasswd=%s", wifiConfigInfo->wifiSsid, wifiConfigInfo->wifiPasswd);
@@ -112,6 +128,7 @@ typedef enum CmdOpCode {
     coClearConfig,
     coStartOtaUpdate,
     coSetLogLevel,
+    coSetLogDest,
     coSetUtcTime,
     coSetUtcOffset,
     coSetWiFi,
@@ -172,6 +189,23 @@ static CmdStatus setLogLevelCmd(struct os_mbuf *om)
     return csSuccess;
 }
 
+static CmdStatus setLogDestCmd(struct os_mbuf *om)
+{
+    LogDest logDest;
+
+    if ((om == NULL) || (om->om_len != 2)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    logDest = om->om_data[1];
+    if (logDest > both) {
+        return csInvParam;
+    }
+    msgLogSetDest(logDest);
+
+    return csSuccess;
+}
+
 static int setUtcTimeCmd(struct os_mbuf *om)
 {
     struct timeval utcTime = {0};
@@ -219,7 +253,7 @@ static int setWiFiCmd(struct os_mbuf *om)
 
 static CmdStatus dumpMlogFileCmd(struct os_mbuf *om)
 {
-    return (dumpMlogFile() == 0) ? csSuccess : csFailed;
+    return (dumpMlogFile(true) == 0) ? csSuccess : csFailed;
 }
 
 static int runCmd(struct ble_gatt_access_ctxt *ctxt)
@@ -258,6 +292,10 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
 
     case coSetLogLevel:
         cmdStatus = setLogLevelCmd(om);
+        break;
+
+    case coSetLogDest:
+        cmdStatus = setLogDestCmd(om);
         break;
 
     case coSetUtcTime:

@@ -33,6 +33,6 @@ extern void appMainTask(void *parms);
 extern void getSerialNumber(SerialNumber *sn);
 extern int restartDevice(void);
 extern int clearConfig(void);
-extern int dumpMlogFile(void);
+extern int dumpMlogFile(bool warn);
 
 __END_DECLS

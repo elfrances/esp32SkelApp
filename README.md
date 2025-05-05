@@ -120,13 +120,16 @@ This characteristic is used to direct the ESP32-C3 device to execute a command. 
 | 0x02   | Clear Config | none |
 | 0x03   | OTA Firmware Update | none|
 | 0x04   | Set MLOG Level | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
-| 0x05   | Set MLOG Destination | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
+| 0x05   | Set MLOG Destination | {UINT8: 0=Console, 1=File, 2=Both} |
 | 0x06   | Set UTC Time | {UINT32: # seconds since the Epoch }
 | 0x07   | Set UTC Offset | {INT8: # hours east or west from GMT } |
 | 0x08   | WiFi | {UINT8: 0=Disabled, 1=Enabled}
 | 0x09   | Dump MLOG File | none
 
-For example, to set the UTC Time to May 2, 2025, 13:10 the command request bytes would be: 05 67 F8 D9 B8.
+For example:
+
+1. To set the UTC Time to May 2, 2025, 13:10 the command request bytes would be: 06 67 F8 D9 B8.
+2. To set the UTC Offset to Pacific Standard Time (UTC-8) the command request bytes would be: 07 F8.
 
 # Example
 

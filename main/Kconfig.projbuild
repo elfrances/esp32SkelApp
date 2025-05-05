@@ -42,31 +42,33 @@ menu "SkelApp Configuration"
     choice MSG_LOG_LEVEL
         prompt "Message Log Level"
         depends on MSG_LOG
+        default MSG_LOG_LEVEL_INFO
         config MSG_LOG_LEVEL_NONE
             bool "No logging"
         config MSG_LOG_LEVEL_INFO
             bool "Informational"
         config MSG_LOG_LEVEL_TRACE 
-            bool "Code tracing"
+            bool "Code Tracing"
         config MSG_LOG_LEVEL_DEBUG 
-            bool "Code debugging"
+            bool "Code Debugging"
     endchoice
     
     config MSG_LOG_LEVEL
         int
         depends on MSG_LOG
-        default 0 if MSG_LOG_LEVEL_NONE 
-        default 1 if MSG_LOG_LEVEL_INFO
-        default 2 if MSG_LOG_LEVEL_TRACE 
-        default 3 if MSG_LOG_LEVEL_DEBUG
+        default 0 if MSG_LOG_LEVEL_NONE     # must match C enum LogLevel.none 
+        default 1 if MSG_LOG_LEVEL_INFO     # must match C enum LogLevel.info
+        default 2 if MSG_LOG_LEVEL_TRACE    # must match C enum LogLevel.trace 
+        default 3 if MSG_LOG_LEVEL_DEBUG    # must match C enum LogLevel.debug
 
     choice MSG_LOG_DEST
         prompt "Message Log Destination"
         depends on MSG_LOG
+        default MSG_LOG_DEST_CONSOLE
         config MSG_LOG_DEST_CONSOLE
             bool "Console"
         config MSG_LOG_DEST_FILE
-            bool "File"
+            bool "File on FAT FS"
             depends on FAT_FS
         config MSG_LOG_DEST_BOTH 
             bool "Console and File"
@@ -76,13 +78,14 @@ menu "SkelApp Configuration"
     config MSG_LOG_DEST
         int
         depends on MSG_LOG
-        default 1 if MSG_LOG_DEST_BOTH
-        default 2 if MSG_LOG_DEST_CONSOLE
-        default 3 if MSG_LOG_DEST_FILE
+        default 0 if MSG_LOG_DEST_CONSOLE   # must match C enum LogDest.console
+        default 1 if MSG_LOG_DEST_FILE      # must match C enum LogDest.file
+        default 2 if MSG_LOG_DEST_BOTH      # must match C enum LogDest.both
         
     choice MSG_LOG_TIMESTAMP
         prompt "Message Log Timestamp"
         depends on MSG_LOG
+        default MSG_LOG_TS_UPTIME_MSEC
         config MSG_LOG_TS_UPTIME_USEC
             bool "Up-time (HH:MM:SS.usec)"
         config MSG_LOG_TS_UPTIME_MSEC
