@@ -114,6 +114,7 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
 {
     if (msgLogLevel == none) {
         // Nothing to do!
+        return;
     }
 
     // Everything at or above "warning" is
