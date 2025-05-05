@@ -159,7 +159,7 @@ menu "SkelApp Configuration"
     config MODEL_NUMBER
         string "Model Number"
         depends on DEVICE_INFO_SERVICE
-        default "SkelApp"
+        default "Wilie Coyote 007"
         help
             "The string used as the Model Number in the Device Information
             Service."
@@ -310,6 +310,13 @@ menu "SkelApp Configuration"
         help
             "Create a FAT file system using the 'storage' partition
             in flash memory."
+
+     config FAT_FS_MOUNT_POINT
+        string "Mount Point"
+        depends on FAT_FS
+        default "/fatfs"
+        help
+            "Specifies the mount point of the FAT FS."
             
     config FAT_FS_MAX_FILES
         int "File Limit"

@@ -34,17 +34,19 @@ static const char *logDestName[] = {
 
 static LogDest msgLogDest = console;
 static LogLevel msgLogLevel = trace;
-static char logFileName[32];
 static SemaphoreHandle_t mutexHandle;
 static StaticSemaphore_t mutexSem;
 
+typedef struct TsBuf {
+    char buf[32]; // big enough for: "YYYY-MM-DD HH:MM:SS.xxxxxx"
+} TsBuf;
+
 #if CONFIG_MSG_LOG_TS_UPTIME_USEC
-static const char *fmtTimestamp(void)
+static const char *fmtTimestamp(TsBuf *tsBuf)
 {
     struct timeval now, deltaT;
     unsigned dd, hh, mm, ss, us;
-    static char tsBuf[32];  // DD HH:MM:SS.uuuuuu
-    size_t bufLen = sizeof (tsBuf);
+    size_t bufLen = sizeof (TsBuf);
 
     gettimeofday(&now, NULL);
     tvSub(&deltaT, &now, &baseTime);
@@ -56,18 +58,17 @@ static const char *fmtTimestamp(void)
     mm = ss / 60;
     ss -= mm * 60;
     us = deltaT.tv_usec;
-    snprintf(tsBuf, bufLen, "%02u %02u:%02u:%02u.%06u", dd, hh, mm, ss, us);
+    snprintf(tsBuf->buf, bufLen, "%02u %02u:%02u:%02u.%06u", dd, hh, mm, ss, us);
 
-    return tsBuf;
+    return tsBuf->buf;
 }
 #elif CONFIG_MSG_LOG_TS_UPTIME_MSEC
-static const char *fmtTimestamp(void)
+static const char *fmtTimestamp(TsBuf *tsBuf)
 {
     TickType_t now = xTaskGetTickCount();
     unsigned ticks = now - baseTicks;
     unsigned dd, hh, mm, ss, ms;
-    static char tsBuf[32];  // DD HH:MM:SS.mmm
-    size_t bufLen = sizeof (tsBuf);
+    size_t bufLen = sizeof (TsBuf);
 
     ss = pdTICKS_TO_MS(ticks) / 1000;
     dd = ss / 86400;
@@ -77,34 +78,33 @@ static const char *fmtTimestamp(void)
     mm = ss / 60;
     ss -= mm * 60;
     ms = pdTICKS_TO_MS(ticks) % 1000;
-    snprintf(tsBuf, bufLen, "%02u %02u:%02u:%02u.%03u", dd, hh, mm, ss, ms);
+    snprintf(tsBuf->buf, bufLen, "%02u %02u:%02u:%02u.%03u", dd, hh, mm, ss, ms);
 
-    return tsBuf;
+    return tsBuf->buf;
 }
 #else
-static const char *fmtTimestamp(void)
+static const char *fmtTimestamp(TsBuf *tsBuf)
 {
     struct timeval now;
     struct tm brkDwnTime;
-    static char tsBuf[32];  // YYYY-MM-DDTHH:MM:SS.xxxxxx
-    size_t bufLen = sizeof (tsBuf);
+    size_t bufLen = sizeof (TsBuf);
     int n;
 
     gettimeofday(&now, NULL);
     now.tv_sec += appConfigInfo.utcOffset * 3600;   // adjust based on UTC offset
-    n = strftime(tsBuf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
+    n = strftime(tsBuf->buf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
 #if CONFIG_MSG_LOG_TS_TOD_USEC
-    snprintf((tsBuf + n), (bufLen - n), ".%06u", (unsigned) now.tv_usec);
+    snprintf((tsBuf->buf + n), (bufLen - n), ".%06u", (unsigned) now.tv_usec);
 #else
    unsigned int ms = now.tv_usec / 1000;
    if (ms >= 1000) {
        now.tv_sec += 1;
        ms -= 1000;
     }
-    snprintf((tsBuf + n), (bufLen - n), ".%03u", ms);
+    snprintf((tsBuf->buf + n), (bufLen - n), ".%03u", ms);
 #endif
 
-    return tsBuf;
+    return tsBuf->buf;
 }
 #endif
 
@@ -112,9 +112,14 @@ static char msgLogBuf[CONFIG_MSG_LOG_MAX_LEN];
 
 void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, const char *fmt, ...)
 {
+    if (msgLogLevel == none) {
+        // Nothing to do!
+    }
+
     // Everything at or above "warning" is
     // always printed...
     if ((logLevel <= msgLogLevel) || (logLevel >= warning)) {
+        TsBuf tsBuf;
         char *p = msgLogBuf;
         int len = sizeof (msgLogBuf);
         int n = 0;
@@ -122,7 +127,7 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
 
         xSemaphoreTake(mutexHandle, portMAX_DELAY);
 
-        n += snprintf((p + n), (len - n), "%s %s ", fmtTimestamp(), logLevelName[logLevel]);
+        n += snprintf((p + n), (len - n), "%s %s ", fmtTimestamp(&tsBuf), logLevelName[logLevel]);
 
         if (logLevel >= trace) {
             n += snprintf((p + n), (len - n), "%s@%u:%s:%d ", pcTaskGetName(NULL), esp_cpu_get_core_id(), funcName, lineNum);
@@ -137,21 +142,28 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
         if ((msgLogDest == both) || (msgLogDest == console)) {
             fprintf(stdout, "%s\n", msgLogBuf);
         }
+#ifdef CONFIG_FAT_FS
         if ((msgLogDest == both) || (msgLogDest == file)) {
             FILE *fp;
-            if ((fp = fopen(logFileName, "a")) == NULL) {
+            if ((fp = fopen(mlogFilePath, "a")) == NULL) {
                 fprintf(stderr, "SPONG! Failed to open log file! %s", strerror(errno));
                 assert(0);
             }
             if (fprintf(fp, "%s\n", msgLogBuf) < 0) {
-                // Running out of space on the FATFS is not fatal
-                if (errno != ENOSPC) {
+                if (errno == ENOSPC) {
+                    // Running out of space on the FATFS is not fatal,
+                    // but we need to switch the log message destination
+                    // to the console, so as to avoid hitting our head
+                    // against the wall over and over...
+                    msgLogDest = console;
+                } else {
                     fprintf(stderr, "SPONG! Failed to write to log file! %s", strerror(errno));
                     assert(0);
                 }
             }
             fclose(fp);
         }
+#endif
 
         if (logLevel == fatal) {
             ledSet(on, red);
@@ -188,14 +200,13 @@ LogDest msgLogSetDest(LogDest logDest)
         if (prevLogDest == console) {
             // Create the log file on the FATFS
             FILE *fp;
-            snprintf(logFileName, sizeof (logFileName), "%s/%s", fatFsMountPath, "mlog.txt");
-            if ((fp = fopen(logFileName, "w+")) != NULL) {
+            if ((fp = fopen(mlogFilePath, "w+")) != NULL) {
                 // Close it
                 fclose(fp);
             } else {
                 // Oops!
                 msgLogDest = prevLogDest;
-                mlog(errNo, "Failed to open log file: %s", logFileName);
+                mlog(errNo, "Failed to open log file: %s", mlogFilePath);
             }
         }
         mlog(info, "New message logging destination is %s", logDestName[msgLogDest]);

@@ -16,8 +16,8 @@ typedef struct AppConfigInfo {
 // This is the app's configuration info
 extern AppConfigInfo appConfigInfo;
 
-// Mount path for the FAT FS
-extern char *fatFsMountPath;
+// Path for the mlog.txt file
+extern const char *mlogFilePath;
 
 // Base (reference) time and ticks
 extern struct timeval baseTime;
@@ -31,5 +31,8 @@ __BEGIN_DECLS
 
 extern void appMainTask(void *parms);
 extern void getSerialNumber(SerialNumber *sn);
+extern int restartDevice(void);
+extern int clearConfig(void);
+extern int dumpMlogFile(void);
 
 __END_DECLS

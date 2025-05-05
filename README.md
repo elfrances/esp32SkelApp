@@ -1,11 +1,20 @@
 # Introduction
 
-**esp32SkelApp** is an ESP-IDF skeletal app for the ESP32 SoC that can be used as a template when creating a new app that uses WiFi and/or BLE.
+**esp32SkelApp** (or **SkelApp** for short) is an ESP-IDF skeletal app for the ESP32 SoC that can be used as a template when creating a new app that uses WiFi and/or BLE.
 The optional features are configured using the "Skeletal App Configuration" section in the sdkconfig, and include:
 
 ### RGB LED
 
-Provides an API for controling the color and blinking rate of the RGB LED. For example, when the app is connecting to WiFi the LED blinks blue 4X per second, when a fatal error occurs the LED is set to solid red, etc.
+Provides an API for controling the color and blinking rate of the RGB LED. The table below describes a few uses of the RGB LED by the SkelApp":
+
+| State | Color | Mode |
+| ------ | ------- | ---------- | 
+| Connecting to WiFi | Blue | 4 bps |
+| Connected to WiFi | Blue | solid |
+| Invalid WiFi Credentials | Magenta | 4 bps |
+| OTA Update In Progress | Cyan | 4 bps |
+| OTA Update Failure | Red | 4 bps |
+| Fatal Error | Red | solid |
 
 ### Message Logging
 
@@ -28,7 +37,7 @@ Adds support for doing OTA firmware updates over WiFi.
 Creates a FAT file system using the 'storage' partition in the flash memory.
 
 
-# How to use it
+# How to use SkelApp
 
 > [!NOTE]
 > This document assumes the user is familiar with the typical workflow of building an ESP-IDF project, either using the command line tools from a terminal, or using the ESP-IDF plug-in with the VScode or Eclipse IDE's.
@@ -111,6 +120,7 @@ This characteristic is used to direct the ESP32-C3 device to execute a command. 
 | 0x05   | Set UTC Time | {UINT32: # seconds since the Epoch }
 | 0x06   | Set UTC Offset | {INT8: # hours east or west from GMT } |
 | 0x07   | WiFi | {UINT8: 0=Disabled, 1=Enabled}
+| 0x08   | Dump MLOG File | none
 
 For example, to set the UTC Time to May 2, 2025, 13:10 the command request bytes would be: 05 67 F8 D9 B8.
 

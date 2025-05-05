@@ -46,7 +46,6 @@ static wl_handle_t wlHandle = WL_INVALID_HANDLE;
 
 static int fatFsInit(void)
 {
-    const char *mountPath = "/fatfs";
     const esp_vfs_fat_mount_config_t fatFsMountConfig = {
         .max_files = CONFIG_FAT_FS_MAX_FILES,
         .format_if_mount_failed = true,
@@ -56,12 +55,12 @@ static int fatFsInit(void)
     uint64_t totalBytes, freeBytes;
     char fileName[272];
 
-    if ((err = esp_vfs_fat_spiflash_mount_rw_wl(mountPath, "storage", &fatFsMountConfig, &wlHandle)) != ESP_OK) {
+    if ((err = esp_vfs_fat_spiflash_mount_rw_wl(CONFIG_FAT_FS_MOUNT_POINT, "storage", &fatFsMountConfig, &wlHandle)) != ESP_OK) {
         mlog(error, "Failed to mount FATFS: %s", esp_err_to_name(err));
         return -1;
     }
 
-    if ((err = esp_vfs_fat_info(mountPath, &totalBytes, &freeBytes)) != ESP_OK) {
+    if ((err = esp_vfs_fat_info(CONFIG_FAT_FS_MOUNT_POINT, &totalBytes, &freeBytes)) != ESP_OK) {
         mlog(error, "Failed to get FATFS info: %s", esp_err_to_name(err));
         return -1;
     }
@@ -72,32 +71,33 @@ static int fatFsInit(void)
         mlog(warning, "No space available in FATFS!");
     }
 
-    // Publish it!
-    fatFsMountPath = (char *) mountPath;
-
     if (CONFIG_FAT_FS_LIST_FILES) {
         DIR *dir;
         struct dirent *dirEnt;
 
         // List the contents of the FATFS
-        if ((dir = opendir(fatFsMountPath)) == NULL) {
+        if ((dir = opendir(CONFIG_FAT_FS_MOUNT_POINT)) == NULL) {
             mlog(errNo, "Failed to open directory");
             return -1;
         }
 
-        printf("\n");
-        printf("     Name     |  Size  \n");
-        printf("--------------+--------\n");
+        printf("\n\nDirectory contents for %s:\n\n", CONFIG_FAT_FS_MOUNT_POINT);
+        printf("         Name     |   Size   |    Last Modified    \n");
+        printf("    --------------+----------+---------------------\n");
         while ((dirEnt = readdir(dir)) != NULL) {
             if (dirEnt->d_type == DT_REG) {
                 const char *dName = dirEnt->d_name;
                 struct stat fileStat;
-                snprintf(fileName, sizeof (fileName), "%s/%s", fatFsMountPath, dName);
+                struct tm brkDwnTime;
+                char tsBuf[20]; // YYYY-MM-DD HH:MM:SS
+
+                snprintf(fileName, sizeof (fileName), "%s/%s", CONFIG_FAT_FS_MOUNT_POINT, dName);
                 if (stat(fileName, &fileStat) != 0) {
                     mlog(errNo, "Failed to stat file %s", fileName);
                     return -1;
                 }
-                printf(" %12s | %6ld \n", dName, fileStat.st_size);
+                strftime(tsBuf, sizeof (tsBuf), "%Y-%m-%d %H:%M:%S", gmtime_r(&fileStat.st_mtim.tv_sec, &brkDwnTime));  // %H means 24-hour time
+                printf("     %12s | %8ld | %19s \n", dName, fileStat.st_size, tsBuf);
             }
         }
         printf("\n");
@@ -106,24 +106,8 @@ static int fatFsInit(void)
     }
 
 #ifdef CONFIG_MSG_LOG_DUMP
-    {
-        FILE *fp;
-        snprintf(fileName, sizeof (fileName), "%s/mlog.txt", fatFsMountPath);
-        if ((fp = fopen(fileName, "r")) != NULL) {
-            char lineBuf[CONFIG_MSG_LOG_MAX_LEN];
-            int n = 0;
-            printf("### Dump of file mlog.txt ###\n");
-            while (fgets(lineBuf, sizeof (lineBuf), fp) != NULL) {
-                printf("FILE: %s", lineBuf);
-                if (++n == 10) {
-                    vTaskDelay(1);
-                    n = 0;
-                }
-            }
-            printf("### End of dump ###\n");
-            fclose(fp);
-        }
-    }
+    // Dump the contents of the MLOG.TXT file
+    dumpMlogFile();
 #endif
 
     // Now that the FAT FS is mounted, see if we need to
@@ -135,7 +119,6 @@ static int fatFsInit(void)
     return 0;
 }
 #endif
-
 
 // This function is called by the ESP-IDF "main" task during
 // system start up.

@@ -114,6 +114,7 @@ typedef enum CmdOpCode {
     coSetUtcTime,
     coSetUtcOffset,
     coSetWiFi,
+    coDumpMlogFile,
     coMax
 } CmdOpCode;
 
@@ -136,15 +137,12 @@ static int getCmdStatus(struct ble_gatt_access_ctxt *ctxt)
 
 static CmdStatus restartDeviceCmd(struct os_mbuf *om)
 {
-    mlog(info, "Restarting the device...");
-    esp_restart();
-    return csSuccess;
+    return (restartDevice() == 0) ? csSuccess : csFailed;
 }
 
 static CmdStatus clearConfigCmd(struct os_mbuf *om)
 {
-    mlog(info, "Clearing the device configuration...");
-    return (nvramClear() == 0) ? csSuccess : csFailed;
+    return (clearConfig() == 0) ? csSuccess : csFailed;
 }
 
 static CmdStatus startOtaUpdateCmd(struct os_mbuf *om)
@@ -218,6 +216,11 @@ static int setWiFiCmd(struct os_mbuf *om)
     return (wifiEnable(enabled) == 0) ? csSuccess : csFailed;
 }
 
+static CmdStatus dumpMlogFileCmd(struct os_mbuf *om)
+{
+    return (dumpMlogFile() == 0) ? csSuccess : csFailed;
+}
+
 static int runCmd(struct ble_gatt_access_ctxt *ctxt)
 {
     struct os_mbuf *om = ctxt->om;
@@ -266,6 +269,10 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
 
     case coSetWiFi:
         cmdStatus = setWiFiCmd(om);
+        break;
+
+    case coDumpMlogFile:
+        cmdStatus = dumpMlogFileCmd(om);
         break;
 
     default:
