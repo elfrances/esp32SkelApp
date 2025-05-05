@@ -1,6 +1,7 @@
 #include "app.h"
 #include "ble.h"
 #include "esp32.h"
+#include "led.h"
 #include "mlog.h"
 #include "nvram.h"
 #include "ota.h"
@@ -415,6 +416,9 @@ static int procConnectEvent(const struct ble_gap_event *event)
 
         mlog(info, "Inbound BLE connection established: connHandle=%u peer=%s",
                 inbConnInfo.connHandle, fmtBleMac(inbConnInfo.peerAddr.val));
+
+        // Let the user know...
+        ledSet(on, yellow);
     }
 
     return 0;
@@ -426,6 +430,9 @@ static int procDisconnectEvent(const struct ble_gap_event *event)
         mlog(info, "Inbound BLE connection dropped: connHandle=%u reason=0x%03x", inbConnInfo.connHandle, event->disconnect.reason);
         memset(&inbConnInfo, 0, sizeof (inbConnInfo));
         nimbleAdvertise();
+
+        // Let the user know...
+        ledSet(off, black);
     }
 
     return 0;
