@@ -73,16 +73,29 @@ sed -i s'/esp32SkelApp/myNewApp/' CMakeLists.txt
 cp sdkconfig.esp32c3 sdkconfig
 ```
 
-5. Run the ESP-IDF menuconfig command and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting:
+> [!TIP]
+> It is adviced that you first build the image using the provided sdkconfig.esp3c3 file. Once you get it to build and run OK on your device, then you can customize the sdkconfig to suit the needs of your app.
+
+5. Build and flash the app:
+
+```
+idf.py build
+idf.py flash -p /dev/ttyUSB0
+```
+
+6. Run the ESP-IDF menuconfig command and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting:
+
+> [!IMPORTANT]
+> Some of the settings in the "Skeletal App Configuration" section depend on ESP-IDF "Component config" settings. For example, you won't be able to enable the SkelApp's BLE Peripheral setting unless the Bluetooth feature is enabled.
 
 ```
 idf.py menuconfig
 ```
+ 
+7. Add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_WAKEUP_PERIOD. Of course you are free to replace this simple periodic work loop, for something more advanced, such as an event-driven work loop that can process different events posted by timers, interrupts, callback's, etc.
 
-> [!IMPORTANT]
-> Some of the settings in the "Skeletal App Configuration" section depend on ESP-IDF "Component config" settings. For example, you won't be able to enable the BLE Peripheral setting unless the Bluetooth feature is enabled.
-
-6. Add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_WAKEUP_PERIOD.
+> [!NOTE]
+> If your app needs to store any data in non-volatile storage, you can extend **SkelApp**'s AppConfigInfo structure, defined in myNewApp/main/app.h.  AppConfigInfo is stored in the NVM partition of the flash memory, and is loaded early on during app start up.
 
 
 # BLE Peripheral Feature
@@ -130,6 +143,17 @@ For example:
 
 1. To set the UTC Time to May 2, 2025, 13:10 the command request bytes would be: 06 67 F8 D9 B8.
 2. To set the UTC Offset to Pacific Standard Time (UTC-8) the command request bytes would be: 07 F8.
+
+Reading this characteristic returns the command execution status, which consists of a single UINT8 value:
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 0x00 | Idle |
+| 0x01 | Command In Progress |
+| 0x02 | Success |
+| 0x03 | Failed |
+| 0x04 | Invalid OpCode |
+| 0x05 | Invalid Parameter |
 
 # Example
 
