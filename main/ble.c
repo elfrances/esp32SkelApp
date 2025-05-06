@@ -662,7 +662,7 @@ static void nimbleOnSync(void)
 
 static void nimbleHostTask(void *param)
 {
-    mlog(info, "Task %s started: core=%u prio=%u", __func__, esp_cpu_get_core_id(), uxTaskPriorityGet(NULL));
+    //mlog(trace, "Task %s started: core=%u prio=%u", __func__, esp_cpu_get_core_id(), uxTaskPriorityGet(NULL));
 
     // This function will return only when nimble_port_stop()
     // is executed...

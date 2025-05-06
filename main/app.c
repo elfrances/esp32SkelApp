@@ -75,8 +75,12 @@ int dumpMlogFile(bool warn)
         printf("### End of dump ###\n\n");
 
         fclose(fp);
-    } else if ((errno == ENOENT) && warn) {
-        mlog(info, "%s not available!", mlogFilePath);
+    } else if (errno == ENOENT) {
+        // This is not necessarily an error. Warn the
+        // user only if asked by the caller...
+        if (warn) {
+            mlog(info, "%s not available!", mlogFilePath);
+        }
     } else {
         mlog(errNo, "Failed to open %s!", mlogFilePath);
         return -1;

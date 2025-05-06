@@ -153,13 +153,11 @@ static void otaUpdTask(void *arg)
     TickType_t delayTicks = 0;
     esp_err_t err;
 
-    //mlog(info, "Task %s started: core=%u prio=%u", __func__, esp_cpu_get_core_id(), uxTaskPriorityGet(NULL));
-
     // Build the OTA update URL: "https://<server-addr>:<port>/<idf-tgt>/update.bin"
-    // where: <idf-tgt>={esp32|esp32c3|esp32-zero|esp32s3|esp32s3-zero}
+    // where: <idf-tgt>={esp32|esp32c3|esp32c3-zero|esp32s3|esp32s3-zero}
 
-#if (CONFIG_RGB_LED_GPIO == 21)
-    // This is a C3-Zero or an S3-Zero device
+#if ((CONFIG_RGB_LED_GPIO == 10) || (CONFIG_RGB_LED_GPIO == 21))
+    // This is a Waveshare C3-Zero or S3-Zero device
     tgtDevSuffix = "-zero";
 #endif
 

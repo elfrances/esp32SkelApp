@@ -2,12 +2,12 @@ menu "SkelApp Configuration"
 
     orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
  
-     menuconfig RGB_LED
-         bool "RGB LED"
-         default y
-         help
-             "When enabled the firmware includes support for
-             the on-board RGB LED."
+    menuconfig RGB_LED
+        bool "RGB LED"
+        default y
+        help
+            When enabled the firmware includes support for
+            the on-board RGB LED.
                     
     config RGB_LED_GPIO
         int "RGB LED GPIO Number"
@@ -18,7 +18,7 @@ menu "SkelApp Configuration"
         default 48 if IDF_TARGET_ESP32S3
         default 8
         help
-            "GPIO pin number used to control the RGB LED."
+            GPIO pin number used to control the RGB LED.
                 
     config RGB_LED_TASK_PRIO
         int "RGB LED Task Priority"
@@ -26,19 +26,19 @@ menu "SkelApp Configuration"
         range 0 24
         default 24
         help
-            "The priority of the task that manages the RGB LED.
+            The priority of the task that manages the RGB LED.
              The valid range is: 0 to (configMAX_PRIORITIES-1).
              The RGB LED task consumes little CPU, so it is OK
              to give it a high priority to keep the LED blinking
-             rate accurate."
-    
+             rate accurate.
+
     menuconfig MSG_LOG
         bool "Message Logging"
         default y
         help
-            "When enabled the firmware includes support for
-            message logging to the console or a file."
- 
+            When enabled the firmware includes support for
+            message logging to the console or a file.
+            
     choice MSG_LOG_LEVEL
         prompt "Message Log Level"
         depends on MSG_LOG
@@ -51,8 +51,8 @@ menu "SkelApp Configuration"
             bool "Code Tracing"
         config MSG_LOG_LEVEL_DEBUG 
             bool "Code Debugging"
-    endchoice
-    
+    endchoice            
+            
     config MSG_LOG_LEVEL
         int
         depends on MSG_LOG
@@ -108,24 +108,24 @@ menu "SkelApp Configuration"
         depends on MSG_LOG
         default 256
         help
-            "Indicates the maximum length of the text in a single log message.
-            Used to dimension the memory buffer where the text is formatted."
+            Indicates the maximum length of the text in a single log message.
+            Used to dimension the memory buffer where the text is formatted.
         
     config MSG_LOG_DUMP
         bool "Message Log Dump"
         depends on MSG_LOG && FAT_FS
         default y
         help
-            "When enabled the message log file is dumped to the console when
-            the system starts up." 
+            When enabled the message log file is dumped to the console when
+            the system starts up. 
             
     menuconfig BLE_PERIPHERAL
         bool "BLE Peripheral"
         depends on BT_NIMBLE_ENABLED
         default y
         help
-            "When enabled the firmware includes BLE peripheral functionality
-            to allow a mobile app to connect to the device."
+            When enabled the firmware includes BLE peripheral functionality
+            to allow a mobile app to connect to the device.
                 
     config BLE_HOST_TASK_PRIO
         int "BLE Host Task Priority"
@@ -133,95 +133,97 @@ menu "SkelApp Configuration"
         range 0 24
         default 24
         help
-            "The priority of the task that runs the BLE Host stack.
-            The valid range is: 0 to (configMAX_PRIORITIES-1)."
+            The priority of the task that runs the BLE Host stack.
+            The valid range is: 0 to (configMAX_PRIORITIES-1).
                 
     config BLE_ADV_NAME
         string "BLE Advertised Name"
         depends on BLE_PERIPHERAL
         default "SKELAPP"
         help
-            "The name sent in the BLE advertisements."
+            The base name used in the BLE advertisements. The actual name sent
+            in the advertisements has the suffix "-NNNN" appended to it, where 
+            NNNN are four hex digits derived from the serial number of the device.
 
     config DEVICE_INFO_SERVICE
         bool "Device Information Service"
         depends on BLE_PERIPHERAL
         default y
         help
-            "When enabled the firmware includes the standard Device Information
-            Service."
+            When enabled the firmware includes the standard Device Information
+            Service.
                                 
     config MANUFACTURER_NAME
         string "Manufacturer Name"
         depends on DEVICE_INFO_SERVICE
         default "Acme Corporation"
         help
-            "The string used as the Manufacturer Name in the Device Information
-            Service."
+            The string used as the Manufacturer Name in the Device Information
+            Service.
                 
     config MODEL_NUMBER
         string "Model Number"
         depends on DEVICE_INFO_SERVICE
         default "Wilie Coyote 007"
         help
-            "The string used as the Model Number in the Device Information
-            Service."
+            The string used as the Model Number in the Device Information
+            Service.
     
     menuconfig WIFI_STATION
         bool "WiFi Station"
         depends on ESP_WIFI_ENABLED
         default y
         help
-            "When enabled the firmware includes WiFi station functionality
-            to allow the device to connect to the Internet."
+            When enabled the firmware includes WiFi station functionality
+            to allow the device to connect to the Internet.
     
     config WPS
         bool "WiFi Protected Setup (WPS)"
         depends on WIFI_STATION
         default y
         help
-            "Adds support for WiFi Protected Setup (WPS) to auto configure the 
-            WiFi credentials using the WiFi router."
+            Adds support for WiFi Protected Setup (WPS) to auto configure the 
+            WiFi credentials using the WiFi router.
                 
     config WIFI_SSID
         string "WiFi SSID"
         depends on WIFI_STATION
         help
-            "Hardcoded WiFi SSID."
+            Hardcoded WiFi SSID.
                 
     config WIFI_PASSWD
         string "WiFi Password"
         depends on WIFI_STATION
         help
-            "Hardcoded WiFi password."
+            Hardcoded WiFi password.
 
     config WIFI_NTP
         bool "Network Time Protocol"
         depends on WIFI_STATION
         default y
         help
-            "Use NTP to obtain the current date and time."
+            Use NTP to obtain the current date and time.
             
     config WIFI_NTP_SERVER
         string "NTP Server"
         depends on WIFI_NTP
         default "pool.ntp.org"
         help
-            "Specifies the FQDN of the NTP server to use to set the
-            current date and time."
+            Specifies the FQDN of the NTP server to use to set the
+            current date and time.
     
     menuconfig OTA_UPDATE
         bool "OTA Update"
         depends on WIFI_STATION
         help
-            "Add support for OTA firmware update over WiFi."
+            Add support for OTA firmware update over WiFi.
 
     config OTA_SERVER_FQDN
         string "OTA Server FQDN"
         depends on OTA_UPDATE
         default "ota.acme.com"
         help
-            "The FQDN (or IPv4 address) of the remote OTA server."
+            The FQDN (or IPv4 address) of the remote OTA server.
 
     config OTA_TCP_PORT
         int "OTA TCP Port"
@@ -229,8 +231,8 @@ menu "SkelApp Configuration"
         range 1024 65536
         default 8070
         help
-            "The TCP port for the HTTPS connection to the remote
-            OTA server."
+            The TCP port for the HTTPS connection to the remote
+            OTA server.
         
      config OTA_TASK_PRIO
         int "OTA Update Task Priority"
@@ -238,8 +240,8 @@ menu "SkelApp Configuration"
         range 0 24
         default 10
         help
-            "The priority of the OTA Update task. The valid range is: 
-            0 to (configMAX_PRIORITIES-1)."
+            The priority of the OTA Update task. The valid range is: 
+            0 to (configMAX_PRIORITIES-1).
 
     config OTA_TASK_STACK
         int "OTA Update Task Stack Size"
@@ -247,13 +249,13 @@ menu "SkelApp Configuration"
         range 5120 8192
         default 5120
         help
-            "The stack size of the OTA Update task."
+            The stack size of the OTA Update task.
  
      menuconfig APP_MAIN_TASK
          bool "App Main Task"
          default y
         help
-            "Have app_main() spawn the event-driven appMainTask, and exit."
+            Have app_main() spawn the event-driven appMainTask, and exit.
      
      config MAIN_TASK_PRIO
         int "App Main Task Priority"
@@ -261,9 +263,9 @@ menu "SkelApp Configuration"
         range 0 24
         default 10
         help
-            "The priority of the app's main task, spawned by app_main()
+            The priority of the app's main task, spawned by app_main()
             during start up.
-            The valid range is: 0 to (configMAX_PRIORITIES-1)."
+            The valid range is: 0 to (configMAX_PRIORITIES-1).
                    
     config MAIN_TASK_STACK
         int "App Main Task Stack Size"
@@ -271,15 +273,15 @@ menu "SkelApp Configuration"
         range 3072 8192
         default 4096
         help
-            "The stack size of the app's main task, spawned by app_main() 
-            during start up."
+            The stack size of the app's main task, spawned by app_main() 
+            during start up.
             
     choice MAIN_TASK_CPU
         prompt "App Main Task CPU Affinity"
         depends on APP_MAIN_TASK
         default MAIN_TASK_CPU_NO_AFFINITY
         help
-            "The CPU core of the app's main task."
+            The CPU core of the app's main task.
 
         config MAIN_TASK_CPU_NO_AFFINITY
             bool "No affinity"
@@ -302,24 +304,24 @@ menu "SkelApp Configuration"
         depends on APP_MAIN_TASK
         default 1000
         help
-            "The period (in milliseconds) of the main task's wakeup
+            The period (in milliseconds) of the main task's wakeup
             event.  The value should be a multiple of the system's
             clock tick period, as defined by FREERTOS_HZ, which is
-            usually 10 ms."
+            usually 10 ms.
 
     menuconfig FAT_FS
         bool "FAT File System"
         default y
         help
-            "Create a FAT file system using the 'storage' partition
-            in flash memory."
-
+            Create a FAT file system using the 'storage' partition
+            in flash memory.
+ 
      config FAT_FS_MOUNT_POINT
         string "Mount Point"
         depends on FAT_FS
         default "/fatfs"
         help
-            "Specifies the mount point of the FAT FS."
+            Specifies the mount point of the FAT FS.
             
     config FAT_FS_MAX_FILES
         int "File Limit"
@@ -327,15 +329,15 @@ menu "SkelApp Configuration"
         range 1 256
         default 4
         help
-            "Specifies the maximum number of files that can be stored
-            in the FAT FS."
+            Specifies the maximum number of files that can be stored
+            in the FAT FS.
     
     config FAT_FS_LIST_FILES
         bool "List Files"
         depends on FAT_FS
         default y
         help
-            "When the system boots, list the files stored on the FAT FS."
+            When the system boots, list the files stored on the FAT FS.
             
 endmenu
 
