@@ -92,16 +92,19 @@ int dumpMlogFile(bool warn)
 
 #ifdef CONFIG_APP_MAIN_TASK
 // This is the app's main task. It runs an infinite work
-// loop, keeping a constant wakeup interval.
+// loop, keeping a constant wake up interval.
 void appMainTask(void *parms)
 {
     const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
+
+    // Custom initialization code goes here...
 
     while (true) {
         TickType_t startTicks, elapsedTicks;
 
         startTicks = xTaskGetTickCount();
 
+        // Custom app code goes here...
         mlog(trace, "Hello world!");
 
         elapsedTicks = xTaskGetTickCount() - startTicks;
