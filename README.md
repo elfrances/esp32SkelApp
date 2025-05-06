@@ -7,17 +7,20 @@ The optional features are configured using the "Skeletal App Configuration" sect
 
 Provides an API for controling the color and mode of the RGB LED, to indicate relevant system events or states.  The supported colors are: black, blue, cyan, green, magenta, orange, purple, red, white, yellow.  The supporting modes are: solid on or blinking at 1, 2, or 4 times per second.
 
-The table below describes a few uses of the RGB LED by the SkelApp":
+The table below describes a few uses of the RGB LED by the **SkelApp**:
 
 | State | Color | Mode |
 | ------ | ------- | ---------- | 
 | Connecting to WiFi | Blue | 4 bps |
 | WiFi Connection Established | Blue | solid |
-| Invalid WiFi Credentials | Magenta | 4 bps |
+| Invalid or Missing WiFi Credentials | Magenta | 4 bps |
 | Inbound BLE Connection Established | Yelow | solid |
 | OTA Update In Progress | Cyan | 4 bps |
 | OTA Update Failure | Red | 4 bps |
 | Fatal Error | Red | solid |
+
+> [!NOTE]
+> The RGB LED is controlled by a dedicated GPIO pin on the ESP32. The GPIO pin number depends on the specific ESP32 board being used, so make sure you select the right value. For Espressif DevKit boards, the default GPIO pin value is selected based on the type of ESP32 SoC used: C3 or S3.
 
 ### Message Logging
 
@@ -25,11 +28,11 @@ Provides an API for logging messages to the console or to a file on the flash FA
 
 ### BLE Peripheral
 
-Adds support for BLE peripheral functionality, so that an external BLE central can discover and connect to the ESP32-C3 device to configure it.
+Adds support for BLE peripheral functionality, so that an external BLE central can discover and connect to the ESP32 device to configure it.
 
 ### WiFi Station
 
-Adds support for WiFi station, so that the ESP32-C3 device can connect to a WiFi network to get Internet connectivity.
+Adds support for WiFi station, so that the ESP32 device can connect to a WiFi network to get Internet connectivity.
 
 ### OTA Update
 
@@ -45,7 +48,7 @@ Creates a FAT file system using the 'storage' partition in the flash memory.
 > [!NOTE]
 > This document assumes the user is familiar with the typical workflow of building an ESP-IDF project, either using the command line tools from a terminal, or using the ESP-IDF plug-in with the VScode or Eclipse IDE's.
 
-Let's assume the app your are developing is called "myNewApp".
+Let's assume the app your are developing is called "myNewApp" and that is going to run on an ESP32-C3 DevKit board.
 
 1. Download the code from GitHub and unzip it:
 
@@ -87,6 +90,10 @@ idf.py flash -p /dev/ttyUSB0
 
 > [!IMPORTANT]
 > Some of the settings in the "Skeletal App Configuration" section depend on ESP-IDF "Component config" settings. For example, you won't be able to enable the SkelApp's BLE Peripheral setting unless the Bluetooth feature is enabled.
+>
+> If your app will not use OTA to update the firmware, then you can regain significant flash memory space by eliminating the OTA partitions in the myNewApp/partitions.csv file.
+>
+> Similarly, if you don't need FAT FS support, you can eliminate the "storage" partition, and give the space back to the factory/ota partitions.
 
 ```
 idf.py menuconfig
@@ -177,6 +184,16 @@ The following screenshots show the iOS LightBlue app connected to the ESP32-C3 d
 
 
 ![LightBlue-4](/assets/IMG_5384.PNG)
+
+# References
+
+[Espressif ESP32-C3 DevKitC-02 Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-devkitc-02/index.html)
+
+[Espressif ESP32-S3 DevKitC-1 Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/index.html)
+
+[Waveshare ESP32-C3-Zero Board](https://www.waveshare.com/wiki/ESP32-C3-Zero)
+
+[Waveshare ESP32-S3-Zero Board](https://www.waveshare.com/wiki/ESP32-S3-Zero)
 
 
 
