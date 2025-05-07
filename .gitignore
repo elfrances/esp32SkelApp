@@ -69,6 +69,7 @@ sdkconfig
 /build/
 /managed_components/
 firmware_update_server/*.pem
+firmware_update_server/esp32*
 .clangd
 
 # Other stuff
