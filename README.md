@@ -20,7 +20,7 @@ The table below describes a few uses of the RGB LED by the **SkelApp**:
 | Fatal Error | Red | solid |
 
 > [!NOTE]
-> The RGB LED is controlled by a dedicated GPIO pin on the ESP32. The GPIO pin number depends on the specific ESP32 board being used, so make sure you select the right value. For Espressif DevKit boards, the default GPIO pin value is selected based on the type of ESP32 SoC used: C3 or S3.
+> The RGB LED is controlled by a dedicated GPIO pin on the ESP32. The GPIO pin number depends on the specific ESP32 board being used, so make sure you select the right value. For Espressif DevKit boards, the default GPIO pin value in the auto-generated sdkconfig file is selected based on the type of ESP32 SoC being used: C3 or S3.
 
 ### Message Logging
 
