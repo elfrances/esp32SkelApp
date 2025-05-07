@@ -68,6 +68,7 @@ sdkconfig.old
 sdkconfig
 /build/
 /managed_components/
+/firmware_update_server/
 .clangd
 
 # Other stuff

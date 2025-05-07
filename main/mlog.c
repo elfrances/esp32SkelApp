@@ -197,6 +197,7 @@ LogDest msgLogSetDest(LogDest logDest)
 {
     LogDest prevLogDest = msgLogDest;
     if ((msgLogDest = logDest) != prevLogDest) {
+#ifdef CONFIG_FAT_FS
         if (prevLogDest == console) {
             // Create the log file on the FATFS
             FILE *fp;
@@ -211,6 +212,7 @@ LogDest msgLogSetDest(LogDest logDest)
                 mlog(errNo, "Failed to open log file: %s", mlogFilePath);
             }
         }
+#endif
         mlog(info, "New message logging destination is %s", logDestName[msgLogDest]);
     }
     return prevLogDest;

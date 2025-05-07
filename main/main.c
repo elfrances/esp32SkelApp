@@ -134,7 +134,10 @@ void app_main(void)
 
     printf("Firmware %s (%s) built on %s at %s using ESP-IDF %s\n",
             appDesc->version, buildType, appDesc->date, appDesc->time, appDesc->idf_ver);
-
+    printf("System Info: CPU=%s CLK=%uMHz, FreeMem=%uKB MaxBlock=%uKB",
+            CONFIG_IDF_TARGET, CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+            heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024,
+            heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024);
 
 #if 1
     // On the ESP32-S3 DevKit the USB port drops whenever

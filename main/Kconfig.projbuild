@@ -214,7 +214,7 @@ menu "SkelApp Configuration"
     
     menuconfig OTA_UPDATE
         bool "OTA Update"
-        depends on WIFI_STATION
+        depends on WIFI_STATION && PARTITION_TABLE_CUSTOM
         help
             Add support for OTA firmware update over WiFi.
 
@@ -311,6 +311,7 @@ menu "SkelApp Configuration"
 
     menuconfig FAT_FS
         bool "FAT File System"
+        depends on PARTITION_TABLE_CUSTOM
         default y
         help
             Create a FAT file system using the 'storage' partition
