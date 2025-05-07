@@ -68,7 +68,7 @@ sdkconfig.old
 sdkconfig
 /build/
 /managed_components/
-/firmware_update_server/
+firmware_update_server/*.pem
 .clangd
 
 # Other stuff
