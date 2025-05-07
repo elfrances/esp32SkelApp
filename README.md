@@ -20,7 +20,9 @@ The table below describes a few uses of the RGB LED by the **SkelApp**:
 | Fatal Error | Red | solid |
 
 > [!NOTE]
-> The RGB LED is controlled by a dedicated GPIO pin on the ESP32. The GPIO pin number depends on the specific ESP32 board being used, so make sure you select the right value. For Espressif DevKit boards, the default GPIO pin value in the auto-generated sdkconfig file is selected based on the type of ESP32 SoC being used: C3 or S3.
+> The RGB LED is controlled by a dedicated GPIO pin on the ESP32. The GPIO pin number depends on the specific ESP32 board being used, so make sure you select the right value.
+>
+> For Espressif DevKit boards, the default GPIO pin value in the auto-generated sdkconfig file is selected based on the type of ESP32 SoC being used: C3 or S3.
 
 ### Message Logging
 
@@ -47,8 +49,24 @@ Creates a FAT file system using the 'storage' partition in the flash memory.
 
 > [!NOTE]
 > This document assumes the user is familiar with the typical workflow of building an ESP-IDF project, either using the command line tools from a terminal, or using the ESP-IDF plug-in with the VScode or Eclipse IDE's.
+>
+> There are several sample sdkconfig files available, for different ESP32 target devices and with support for different features. See the table below:
+>
+> | File | Target Device | LED | MLOG | BLE | WiFi | OTA | FAT |
+> | --- | --- | --- | --- | --- | --- | --- | --- |
+> | sdkconfig.esp32c3.basic | ESP32-C3 DevKit-C02 | x | x | x | x |   |   |
+> | sdkconfig.esp32c3.ota+fat | ESP32-C3 DevKit-C02 | x | x | x | x | x | x |
+> | sdkconfig.esp32S3.basic | ESP32-S3 DevKit-C1 | x | x | x | x |   |   |
+> | sdkconfig.esp32S3.ota+fat | ESP32-S3 DevKit-C1 | x | x | x | x | x | x |
 
-Let's assume the app your are developing is called "myNewApp" and that is going to run on an ESP32-C3 DevKit board.
+> [!TIP]
+> It is adviced that you first build the image using one of the provided sdkconfig files. Once you get it to build and run OK on your device, then you can customize the sdkconfig to suit the needs of your app.
+
+For the purpose of this example, let's assume that:
+
+* The app your are developing is called "myNewApp".
+* The target device is an ESP32-C3 DevKit board.
+* There is no need for OTA or FAT.
 
 1. Download the code from GitHub and unzip it:
 
@@ -70,14 +88,11 @@ cd myNewApp
 sed -i s'/esp32SkelApp/myNewApp/' CMakeLists.txt
 ```
 
-4. Use the sample sdkconfig.esp32c3 file to create the project's sdkconfig file:
+4. Use the sample sdkconfig.esp32c3.basic file to create the project's sdkconfig file:
 
 ```
-cp sdkconfig.esp32c3 sdkconfig
+cp sdkconfig.esp32c3.basic sdkconfig
 ```
-
-> [!TIP]
-> It is adviced that you first build the image using the provided sdkconfig.esp3c3 file. Once you get it to build and run OK on your device, then you can customize the sdkconfig to suit the needs of your app.
 
 5. Build and flash the app:
 
