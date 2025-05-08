@@ -126,11 +126,13 @@ idf.py menuconfig
 
 It advertises the following BLE services:
 
-1. The standard Bluetooth SIG "Device Information Service", which is used to report the app's serial number, firmware version, etc.
+1. The standard Bluetooth SIG "Device Information Service" (DIS), which is used to report the app's serial number, firmware version, etc.
 
-2. A custom "Device Configuration Service" using the reserved 16-bit UUID 0xFE00.  This service can be used to manually configure the WiFi credentials, set the UTC offset, perform a firmware upgrade, restart the device, etc.  This service can be accessed using a generic BLE explorer app, such as [LightBlue](https://punchthrough.com/lightblue/) or by using a custom-designed iOS/Android app.
+2. A custom "Device Configuration Service" (DCS), which can be used to manually configure the WiFi credentials, set the UTC offset, perform a firmware upgrade, restart the device, etc.  This service uses a configurable 16-bit UUID, and can be accessed using a generic BLE explorer app, such as [LightBlue](https://punchthrough.com/lightblue/) or by using a custom-designed iOS/Android app.
 
-The Device Configuration Service supports the following characteristics:
+The characteristics in the DCS get their UUID's from the UUID of the service, such that characteristic number N gets assigned the value: DCS UUID plus N.
+
+The DCS supports the following characteristics (assuming the default DCS UUID 0xFE00):
 
 ### FE01: WiFi Credentials
 
@@ -153,12 +155,12 @@ This characteristic is used to direct the ESP32-C3 device to execute a command. 
 | 0x00   | No Operation   | none       |
 | 0x01   | Restart Device | none |
 | 0x02   | Clear Config | none |
-| 0x03   | OTA Firmware Update | none|
+| 0x03   | Start OTA Firmware Update | none|
 | 0x04   | Set MLOG Level | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
 | 0x05   | Set MLOG Destination | {UINT8: 0=Console, 1=File, 2=Both} |
 | 0x06   | Set UTC Time | {UINT32: # seconds since the Epoch }
 | 0x07   | Set UTC Offset | {INT8: # hours east or west from GMT } |
-| 0x08   | WiFi | {UINT8: 0=Disabled, 1=Enabled}
+| 0x08   | Set WiFi State | {UINT8: 0=Disabled, 1=Enabled}
 | 0x09   | Dump MLOG File | none
 
 For example:
