@@ -11,15 +11,15 @@
 // Forward declarations
 static void nimbleAdvertise(void);
 
-// Device Info Service
+static SerialNumber serialNumber;
+
+// Bluetooth SIG Device Info Service
 #define GATT_DEVICE_INFO_UUID               0x180A
 #define GATT_MANUFACTURER_NAME_UUID             0x2A29  // READ
 #define GATT_MODEL_NUMBER_UUID                  0x2A24  // READ
 #define GATT_SERIAL_NUMBER_UUID                 0x2A25  // READ
 #define GATT_FIRMWARE_REVISION_UUID             0x2a26  // READ
 #define GATT_HARDWARE_REVISION_UUID             0x2a27  // READ
-
-static SerialNumber serialNumber;
 
 static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
@@ -47,12 +47,6 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
 
     return (os_mbuf_append(ctxt->om, string, strlen(string)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
-
-// Device Config Service
-#define GATT_DEVICE_CONFIG_UUID             0xFE00
-#define GATT_WIFI_CREDENTIALS_UUID              0xFE01  // READ, WRITE
-#define GATT_WIFI_IP_ADDRESS_UUID               0xFE02  // READ
-#define GATT_COMMAND_UUID                       0xFE03  // READ, WRITE
 
 // The WiFi Credentials data is a UTF-8 string that
 // includes the SSID and Password strings concatenated
@@ -322,6 +316,26 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
     return 0;
 }
 
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
+static const char *cmdHelp = \
+        "01: Restart\n"
+        "02: Clear Config\n"
+        "03: OTA Update\n"
+        "04: MLOG Level {0=No 1=Inf 2=Trc 3=Dbg}\n"
+        "05: MLOG Dest {0=Con 1=File 2=Both}\n"
+        "06: UTC Time {secs since Epoch}\n"
+        "07: UTC Offset {hrs from UTC}\n"
+        "08: WiFi State {0=Dis 1=Ena}\n"
+        "09: Dump MLOG.TXT\n";
+#endif
+
+// Custom Device Config Service
+#define GATT_DEVICE_CONFIG_UUID             CONFIG_DEVICE_CONFIG_SERVICE_UUID
+#define GATT_WIFI_CREDENTIALS_UUID              (CONFIG_DEVICE_CONFIG_SERVICE_UUID+1)   // READ, WRITE
+#define GATT_WIFI_IP_ADDRESS_UUID               (CONFIG_DEVICE_CONFIG_SERVICE_UUID+2)   // READ
+#define GATT_COMMAND_UUID                       (CONFIG_DEVICE_CONFIG_SERVICE_UUID+3)   // READ, WRITE
+#define GATT_COMMAND_HELP_UUID                  (CONFIG_DEVICE_CONFIG_SERVICE_UUID+4)   // READ
+
 static int deviceConfigCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     uint16_t uuid = ble_uuid_u16(ctxt->chr->uuid);
@@ -340,6 +354,10 @@ static int deviceConfigCb(uint16_t conn_handle, uint16_t attr_handle, struct ble
         } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
             return runCmd(ctxt);
         }
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
+    } else if (uuid == GATT_COMMAND_HELP_UUID) {
+        return (os_mbuf_append(ctxt->om, cmdHelp, strlen(cmdHelp)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+#endif
     }
 
     return 0;
@@ -411,6 +429,14 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
                 .access_cb = deviceConfigCb,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE
             },
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
+            {
+                // Command Help
+                .uuid = BLE_UUID16_DECLARE(GATT_COMMAND_HELP_UUID),
+                .access_cb = deviceConfigCb,
+                .flags = BLE_GATT_CHR_F_READ,
+            },
+#endif
             {
                 0,  // No more characteristics in this service
             },

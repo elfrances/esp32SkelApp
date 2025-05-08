@@ -132,20 +132,21 @@ void app_main(void)
 #endif
     esp_err_t err;
 
-    printf("Firmware %s (%s) built on %s at %s using ESP-IDF %s\n",
-            appDesc->version, buildType, appDesc->date, appDesc->time, appDesc->idf_ver);
-    printf("System Info: CPU=%s CLK=%uMHz, FreeMem=%uKB MaxBlock=%uKB",
-            CONFIG_IDF_TARGET, CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
-            heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024,
-            heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024);
-
 #if 1
     // On the ESP32-S3 DevKit the USB port drops whenever
     // the board is reset. This delay allows the user to
     // reconnect the terminal emulator to the UART port in
     // order to see the early initialization log messages.
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    printf("\n\n*** Forced 3 sec delay ***\n\n");
+    vTaskDelay(pdMS_TO_TICKS(3000));
 #endif
+
+    printf("Firmware %s (%s) built on %s at %s using ESP-IDF %s\n",
+            appDesc->version, buildType, appDesc->date, appDesc->time, appDesc->idf_ver);
+    printf("System Info: CPU=%s CLK=%uMHz, FreeMem=%uKB MaxBlock=%uKB\n",
+            CONFIG_IDF_TARGET, CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+            heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024,
+            heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024);
 
     // Set the base time and ticks
     gettimeofday(&baseTime, NULL);

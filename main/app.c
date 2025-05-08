@@ -91,28 +91,45 @@ int dumpMlogFile(bool warn)
 }
 
 #ifdef CONFIG_APP_MAIN_TASK
+// App initialization
+static int appInit(void)
+{
+    // TBD
+    return 0;
+}
+
 // This is the app's main task. It runs an infinite work
 // loop, keeping a constant wake up interval.
 void appMainTask(void *parms)
 {
     const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
 
-    // Custom initialization code goes here...
+    // Initialize whatever is needed before entering
+    // the infinite work loop.
+    if (appInit() != 0) {
+        mlog(fatal, "App initialization failed!");
+    }
 
     while (true) {
         TickType_t startTicks, elapsedTicks;
 
+        // Record the start of this new pass of our
+        // work loop.
         startTicks = xTaskGetTickCount();
 
         // Custom app code goes here...
         mlog(trace, "Hello world!");
 
+        // Figure out how much time we spent so far
         elapsedTicks = xTaskGetTickCount() - startTicks;
 
         if (elapsedTicks < wakeupPeriodTicks) {
             // Sleep until the next poll period...
             TickType_t delayTicks = wakeupPeriodTicks - elapsedTicks;
             vTaskDelay(delayTicks);
+        } else if (elapsedTicks > wakeupPeriodTicks) {
+            // Oops! We exceeded the required wake up period!
+            mlog(warning, "Wakeup period exceeded by %lu ms !!!", pdTICKS_TO_MS(elapsedTicks - wakeupPeriodTicks));
         }
     }
 

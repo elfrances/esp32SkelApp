@@ -169,6 +169,21 @@ menu "SkelApp Configuration"
             The string used as the Model Number in the Device Information
             Service.
     
+    config DEVICE_CONFIG_SERVICE_UUID
+        hex "Device Config Service UUID"
+        depends on BLE_PERIPHERAL
+        default 0xFE00
+        help
+            The 16-bit UUID to use for the custom Device Configuration Service.         
+        
+    config DEVICE_CONFIG_SERVICE_HELP
+        bool "Device Config Service Help"
+        depends on BLE_PERIPHERAL
+        default y
+        help
+            When enabled the firmware includes built-in help for the custom
+            Device Configuration Service.            
+    
     menuconfig WIFI_STATION
         bool "WiFi Station"
         depends on ESP_WIFI_ENABLED
