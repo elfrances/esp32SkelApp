@@ -179,6 +179,24 @@ Reading this characteristic returns the command execution status, which consists
 | 0x04 | Invalid OpCode |
 | 0x05 | Invalid Parameter |
 
+### FE04: Command Help
+
+Properties: Read
+
+This characteristic can be used to get help about the commands supported by the Command Request characteristic. When read, it returns the following UTF-8 string:
+
+```
+01: Restart
+02: Clear Config
+03: OTA Update
+04: MLOG Level {0=No 1=Inf 2=Trc 3=Dbg}
+05: MLOG Dest {0=Con 1=File 2=Both}
+06: UTC Time
+07: UTC Offset
+08: WiFi State {0=Dis 1=Ena}
+09: Dump MLOG.TXT
+```
+
 # Example
 
 Using the following SDK Configuration: 
