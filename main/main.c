@@ -125,11 +125,11 @@ static int fatFsInit(void)
 // system start up.
 void app_main(void)
 {
-    const esp_app_desc_t *appDesc = esp_app_get_description();
+    appBuildInfo.appDesc = esp_app_get_description();
 #if (CONFIG_COMPILER_OPTIMIZATION_DEFAULT)
-    const char *buildType = "Debug";
+    appBuildInfo.buildType = "Debug";
 #else
-    const char *buildType = "Release";
+    appBuildInfo.buildType = "Release";
 #endif
     esp_err_t err;
 
@@ -146,7 +146,7 @@ void app_main(void)
 #endif
 
     printf("Firmware %s (%s) built on %s at %s using ESP-IDF %s\n",
-            appDesc->version, buildType, appDesc->date, appDesc->time, appDesc->idf_ver);
+            appBuildInfo.appDesc->version, appBuildInfo.buildType, appBuildInfo.appDesc->date, appBuildInfo.appDesc->time, appBuildInfo.appDesc->idf_ver);
     printf("System Info: CPU=%s CLK=%uMHz, FreeMem=%uKB MaxBlock=%uKB\n",
             CONFIG_IDF_TARGET, CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
             heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024,

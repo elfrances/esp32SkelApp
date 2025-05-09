@@ -71,7 +71,7 @@ static InbConnInfo inbConnInfo;
 static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     uint16_t uuid = ble_uuid_u16(ctxt->chr->uuid);
-    char strBuf[32];
+    char strBuf[64];
     const char *string = "???";
 
     if (uuid == GATT_DIS_MANUFACTURER_NAME_UUID) {
@@ -83,8 +83,7 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
                 serialNumber.digits[0], serialNumber.digits[1], serialNumber.digits[2], serialNumber.digits[3]);
         string = strBuf;
     } else if (uuid == GATT_DIS_FIRMWARE_REVISION_UUID) {
-        const esp_app_desc_t *appDesc = esp_app_get_description();
-        snprintf(strBuf, sizeof (strBuf), "%s", appDesc->version);
+        snprintf(strBuf, sizeof (strBuf), "%s (%s)", appBuildInfo.appDesc->version, appBuildInfo.buildType);
         string = strBuf;
     } else if (uuid == GATT_DIS_HARDWARE_REVISION_UUID) {
         string = CONFIG_IDF_TARGET;

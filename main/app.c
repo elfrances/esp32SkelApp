@@ -4,8 +4,11 @@
 #include "mlog.h"
 #include "nvram.h"
 
-// This is the app's configuration info
+// App's configuration info record
 AppConfigInfo appConfigInfo;
+
+// App's build info record
+AppBuildInfo appBuildInfo;
 
 #ifdef CONFIG_FAT_FS
 // Path for the MLOG.TXT file

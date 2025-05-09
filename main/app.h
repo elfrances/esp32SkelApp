@@ -15,8 +15,17 @@ typedef struct AppConfigInfo {
 
 } AppConfigInfo;
 
-// This is the app's configuration info
+// App's configuration info record
 extern AppConfigInfo appConfigInfo;
+
+// App build info
+typedef struct AppBuildInfo {
+    const char *buildType;
+    const esp_app_desc_t *appDesc;
+} AppBuildInfo;
+
+// App's build info record
+extern AppBuildInfo appBuildInfo;
 
 // Path for the mlog.txt file
 extern const char *mlogFilePath;
