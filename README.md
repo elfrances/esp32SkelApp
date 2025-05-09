@@ -301,6 +301,8 @@ The following screenshots show the iOS LightBlue app connected to the ESP32-C3 d
 
 # References
 
+[Espressif IoT Development Framework](https://github.com/espressif/esp-idf)
+
 [Espressif ESP32-C3 DevKitC-02 Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-devkitc-02/index.html)
 
 [Espressif ESP32-S3 DevKitC-1 Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/index.html)
