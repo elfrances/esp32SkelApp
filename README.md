@@ -116,6 +116,53 @@ idf.py menuconfig
  
 7. Add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_WAKEUP_PERIOD. Of course you are free to replace this simple periodic work loop, for something more advanced, such as an event-driven work loop that can process different events posted by timers, interrupts, callback's, etc.
 
+```
+// App initialization
+static int appInit(void)
+{
+    // TBD
+    return 0;
+}
+
+// This is the app's main task. It runs an infinite work
+// loop, keeping a constant wake up interval.
+void appMainTask(void *parms)
+{
+    const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
+
+    // Initialize whatever is needed before entering
+    // the infinite work loop.
+    if (appInit() != 0) {
+        mlog(fatal, "App initialization failed!");
+    }
+
+    while (true) {
+        TickType_t startTicks, elapsedTicks;
+
+        // Record the start of this new pass of our
+        // work loop.
+        startTicks = xTaskGetTickCount();
+
+        // Custom app code goes here...
+        mlog(trace, "Hello world!");
+
+        // Figure out how much time we spent so far
+        elapsedTicks = xTaskGetTickCount() - startTicks;
+
+        if (elapsedTicks < wakeupPeriodTicks) {
+            // Sleep until the next poll period...
+            TickType_t delayTicks = wakeupPeriodTicks - elapsedTicks;
+            vTaskDelay(delayTicks);
+        } else if (elapsedTicks > wakeupPeriodTicks) {
+            // Oops! We exceeded the required wake up period!
+            mlog(warning, "Wakeup period exceeded by %lu ms !!!", pdTICKS_TO_MS(elapsedTicks - wakeupPeriodTicks));
+        }
+    }
+
+    vTaskDelete(NULL);
+}
+```
+
 > [!NOTE]
 > If your app needs to store any data in non-volatile storage, you can extend **SkelApp**'s AppConfigInfo structure, defined in myNewApp/main/app.h.  AppConfigInfo is stored in the NVM partition of the flash memory, and is loaded early on during app start up.
 
@@ -136,17 +183,34 @@ The DCS supports the following characteristics (assuming the default DCS UUID 0x
 
 ### FE01: WiFi Credentials
 
+Properties: READ,WRITE
+
 This characteristic is used to manually set the WiFi credentials. The value is a UTF-8 string that includes the SSID and Password strings concatenated together, using the character sequence "###" as a separator.
 
 For example, if the SSID is "HomeSweetHome" and the Password is "TopSecret!", the UTF-8 string to be written would be: "HomeSweetHome###TopSecret!".
 
-### FE02: WiFi IP Address
+### FE02: Operating Status
 
-This read-only characteristic is used to obtain the IPv4 address assigned to the ESP32-C3 device.  It consists of four UINT8 values that encode the IPv4 address in network-byte order.
+Properties: READ
 
-For example, the address 192.168.0.16 would be encoded as: C0 A8 00 10. 
+This read-only characteristic is used to obtain the operating status of the ESP32-C3 device. The data has the following format:
+
+| Offset | Description | Data |
+| ------ | ----------- | ---- |
+| 0x00   | System Up Time | {UINT32: # seconds since boot} |
+| 0x04   | WiFi Station IP Address | {UINT32: IPv4 address} |
+| 0x08   | WiFi Access Point IP Address | {UINT32: IPv4 address} |
+| 0x0C   | WiFi Station MAC Address | {UINT8[6]: IEEE 802.3 MAC Address} |
+| 0x12   | WiFi RSSI | {INT16: RSSI in dBm} |
+| 0x14   | BLE Peripheral MAC Address | {UINT8[6]: IEEE 802.3 MAC Address} |
+| 0x1A   | BLE Central MAC Address | {UINT8[6]: IEEE 802.3 MAC Address} |
+| 0x20   | Free Memory | {UINT16: Free Memory in KB} |
+| 0x22   | Max Free Block | {UINT16: Max Free Memory Block in KB} |
+| 0x24   | TBD | |
 
 ### FE03: Command Request
+
+Properties: READ,WRITE,INDICATE
 
 This characteristic is used to direct the ESP32-C3 device to execute a command.  The supported commands are:
 
@@ -158,10 +222,11 @@ This characteristic is used to direct the ESP32-C3 device to execute a command. 
 | 0x03   | Start OTA Firmware Update | none|
 | 0x04   | Set MLOG Level | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
 | 0x05   | Set MLOG Destination | {UINT8: 0=Console, 1=File, 2=Both} |
-| 0x06   | Set UTC Time | {UINT32: # seconds since the Epoch }
+| 0x06   | Set UTC Time | {UINT32: # seconds since the Epoch } |
 | 0x07   | Set UTC Offset | {INT8: # hours east or west from GMT } |
-| 0x08   | Set WiFi State | {UINT8: 0=Disabled, 1=Enabled}
-| 0x09   | Dump MLOG File | none
+| 0x08   | Set WiFi State | {UINT8: 0=Disabled, 1=Enabled} |
+| 0x09   | Dump MLOG File | none |
+| 0x0A   | Delete MLOG File | none |
 
 For example:
 
@@ -179,9 +244,11 @@ Reading this characteristic returns the command execution status, which consists
 | 0x04 | Invalid OpCode |
 | 0x05 | Invalid Parameter |
 
+If indications are enabled, the command execution status is sent in a BLE indication right after the operation completes.
+
 ### FE04: Command Help
 
-Properties: Read
+Properties: READ
 
 This characteristic can be used to get help about the commands supported by the Command Request characteristic. When read, it returns the following UTF-8 string:
 
