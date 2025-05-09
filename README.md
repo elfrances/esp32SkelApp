@@ -211,7 +211,8 @@ This read-only characteristic is used to obtain the operating status of the ESP3
 | 0x04   | WiFi Station IP Address | {UINT32: IPv4 address} |
 | 0x08   | WiFi Access Point IP Address | {UINT32: IPv4 address} |
 | 0x0C   | WiFi Station MAC Address | {UINT8[6]: IEEE 802.3 MAC Address} |
-| 0x12   | WiFi RSSI | {INT16: RSSI in dBm} |
+| 0x12   | WiFi RSSI | {INT8: RSSI in dBm} |
+| 0x13   | WiFi Channel | {UINT8: channel number} |
 | 0x14   | BLE Peripheral MAC Address | {UINT8[6]: IEEE 802.3 MAC Address} |
 | 0x1A   | BLE Central MAC Address | {UINT8[6]: IEEE 802.3 MAC Address} |
 | 0x20   | Free Memory | {UINT16: Free Memory in KB} |
