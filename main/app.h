@@ -11,6 +11,8 @@ typedef struct AppConfigInfo {
     WiFiConfigInfo wifiConfigInfo;
     int8_t utcOffset;
 
+    // Custom app config goes here
+
 } AppConfigInfo;
 
 // This is the app's configuration info
@@ -34,5 +36,6 @@ extern void getSerialNumber(SerialNumber *sn);
 extern int restartDevice(void);
 extern int clearConfig(void);
 extern int dumpMlogFile(bool warn);
+extern int deleteMlogFile(bool warn);
 
 __END_DECLS

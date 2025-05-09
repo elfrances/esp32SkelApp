@@ -9,8 +9,8 @@ typedef struct WiFiConfigInfo {
     uint8_t wifiMac[6];     // WiFi MAC address
     int8_t rssi;            // WiFi RSSI value [in dBm]
     uint8_t priChan;        // WiFi primary channel
-    uint32_t wifiIpAddr;    // DHCP assigned IP address
-    uint32_t wifiGwAddr;    // WiFi router IP address
+    uint32_t wifiIpAddr;    // DHCP assigned IP address (in network byte order)
+    uint32_t wifiGwAddr;    // WiFi router IP address (in network byte order)
 } WiFiConfigInfo;
 
 __BEGIN_DECLS

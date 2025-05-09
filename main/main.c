@@ -4,6 +4,7 @@
 #include "app.h"
 #include "ble.h"
 #include "esp32.h"
+#include "fgc.h"
 #include "led.h"
 #include "mlog.h"
 #include "nvram.h"
@@ -131,6 +132,9 @@ void app_main(void)
     const char *buildType = "Release";
 #endif
     esp_err_t err;
+
+    // Reset the terminal's foreground color highlighting
+    printf("%s\n", RESET_FGC);
 
 #if 1
     // On the ESP32-S3 DevKit the USB port drops whenever

@@ -185,9 +185,6 @@ int msgLogInit(LogLevel defLogLevel, LogDest defLogDest)
         return -1;
     }
 
-    // Reset the terminal's foreground color highlighting
-    fprintf(stdout, "%s\n", RESET_FGC);
-
     mlog(info, "Message logging enabled: level=%s", logLevelName[defLogLevel]);
 
     return 0;

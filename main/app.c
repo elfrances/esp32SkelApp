@@ -90,6 +90,26 @@ int dumpMlogFile(bool warn)
     return 0;
 }
 
+int deleteMlogFile(bool warn)
+{
+#ifdef CONFIG_FAT_FS
+    if (unlink(mlogFilePath) != 0) {
+        if (errno == ENOENT) {
+            // This is not necessarily an error. Warn the
+            // user only if asked by the caller...
+            if (warn) {
+                mlog(info, "%s not available!", mlogFilePath);
+            }
+        } else {
+            mlog(errNo, "Failed to delete %s!", mlogFilePath);
+            return -1;
+        }
+    }
+#endif
+
+    return 0;
+}
+
 #ifdef CONFIG_APP_MAIN_TASK
 // App initialization
 static int appInit(void)

@@ -11,15 +11,62 @@
 // Forward declarations
 static void nimbleAdvertise(void);
 
+static void blePutINT16(uint8_t *data, uint16_t value)
+{
+    *data++ = (value & 0xff);
+    *data = ((value >> 8) & 0xff);
+}
+
+//static void blePutINT24(uint8_t *data, uint32_t value)
+//{
+//    *data++ = (value & 0xff);
+//    *data++ = ((value >> 8) & 0xff);
+//    *data = ((value >> 16) & 0xff);
+//}
+
+static void blePutINT32(uint8_t *data, uint32_t value)
+{
+    *data++ = (value & 0xff);
+    *data++ = ((value >> 8) & 0xff);
+    *data++ = ((value >> 16) & 0xff);
+    *data = ((value >> 24) & 0xff);
+}
+
+//static void blePutINT64(uint8_t *data, uint64_t value)
+//{
+//    *data++ = (value & 0xff);
+//    *data++ = ((value >> 8) & 0xff);
+//    *data++ = ((value >> 16) & 0xff);
+//    *data++ = ((value >> 24) & 0xff);
+//    *data++ = ((value >> 32) & 0xff);
+//    *data++ = ((value >> 40) & 0xff);
+//    *data++ = ((value >> 48) & 0xff);
+//    *data = ((value >> 56) & 0xff);
+//}
+
+// Device Serial Number
 static SerialNumber serialNumber;
 
+// Inbound Connection Information
+typedef struct InbConnInfo {
+    time_t connTime;
+    uint16_t connHandle;
+    uint16_t cmdReqHandle;
+    bool connEstablished;
+    bool cmdReqIndicate;
+    ble_addr_t ourAddr;
+    ble_addr_t peerAddr;
+} InbConnInfo;
+
+static InbConnInfo inbConnInfo;
+
 // Bluetooth SIG Device Info Service
-#define GATT_DEVICE_INFO_UUID               0x180A
-#define GATT_MANUFACTURER_NAME_UUID             0x2A29  // READ
-#define GATT_MODEL_NUMBER_UUID                  0x2A24  // READ
-#define GATT_SERIAL_NUMBER_UUID                 0x2A25  // READ
-#define GATT_FIRMWARE_REVISION_UUID             0x2a26  // READ
-#define GATT_HARDWARE_REVISION_UUID             0x2a27  // READ
+#define GATT_DEVICE_INFO_SERVICE_UUID       0x180A
+#define GATT_DIS_MANUFACTURER_NAME_UUID         0x2A29  // READ
+#define GATT_DIS_MODEL_NUMBER_UUID              0x2A24  // READ
+#define GATT_DIS_SERIAL_NUMBER_UUID             0x2A25  // READ
+#define GATT_DIS_FIRMWARE_REVISION_UUID         0x2a26  // READ
+#define GATT_DIS_HARDWARE_REVISION_UUID         0x2a27  // READ
 
 static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
@@ -27,19 +74,19 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
     char strBuf[32];
     const char *string = "???";
 
-    if (uuid == GATT_MANUFACTURER_NAME_UUID) {
+    if (uuid == GATT_DIS_MANUFACTURER_NAME_UUID) {
         string = CONFIG_MANUFACTURER_NAME;
-    } else if (uuid == GATT_MODEL_NUMBER_UUID) {
+    } else if (uuid == GATT_DIS_MODEL_NUMBER_UUID) {
         string = CONFIG_MODEL_NUMBER;
-    } else if (uuid == GATT_SERIAL_NUMBER_UUID) {
+    } else if (uuid == GATT_DIS_SERIAL_NUMBER_UUID) {
         snprintf(strBuf, sizeof (strBuf), "%02X%02X%02X%02X",
                 serialNumber.digits[0], serialNumber.digits[1], serialNumber.digits[2], serialNumber.digits[3]);
         string = strBuf;
-    } else if (uuid == GATT_FIRMWARE_REVISION_UUID) {
+    } else if (uuid == GATT_DIS_FIRMWARE_REVISION_UUID) {
         const esp_app_desc_t *appDesc = esp_app_get_description();
         snprintf(strBuf, sizeof (strBuf), "%s", appDesc->version);
         string = strBuf;
-    } else if (uuid == GATT_HARDWARE_REVISION_UUID) {
+    } else if (uuid == GATT_DIS_HARDWARE_REVISION_UUID) {
         string = CONFIG_IDF_TARGET;
     }
 
@@ -109,35 +156,32 @@ static int setWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
     return 0;
 }
 
-static int getWiFiIpAddress(struct ble_gatt_access_ctxt *ctxt)
+static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
 {
     WiFiConfigInfo *wifiConfigInfo = &appConfigInfo.wifiConfigInfo;
-    return (os_mbuf_append(ctxt->om, &wifiConfigInfo->wifiIpAddr, sizeof (wifiConfigInfo->wifiIpAddr)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+    DevOperStatus devOperStatus = {0};
+
+    uint32_t sysUpTime = pdTICKS_TO_MS(xTaskGetTickCount() - baseTicks) / 1000;
+    blePutINT32(devOperStatus.sysUpTime, sysUpTime);
+    blePutINT32(devOperStatus.wifiStaIpAddr, wifiConfigInfo->wifiIpAddr);
+    blePutINT32(devOperStatus.wifiApIpAddr, wifiConfigInfo->wifiGwAddr);
+    memcpy(devOperStatus.wifiStaMacAddr, wifiConfigInfo->wifiMac, 6);
+    devOperStatus.wifiRssi = wifiConfigInfo->rssi;
+    devOperStatus.wifiChan = wifiConfigInfo->priChan;
+    memcpy(devOperStatus.blePerMacAddr, inbConnInfo.ourAddr.val, 6);
+    memcpy(devOperStatus.bleCenMacAddr, inbConnInfo.peerAddr.val, 6);
+    blePutINT16(devOperStatus.freeHeapMem, (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024));
+    blePutINT16(devOperStatus.maxHeapMemBlk, (heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024));
+#ifdef CONFIG_FAT_FS
+    uint64_t totalBytes, freeBytes;
+    if (esp_vfs_fat_info(CONFIG_FAT_FS_MOUNT_POINT, &totalBytes, &freeBytes) == ESP_OK) {
+        uint16_t freeFatFsSpace = freeBytes / 1024;
+        blePutINT16(devOperStatus.freeFatFsSpace, freeFatFsSpace);
+    }
+#endif
+
+    return (os_mbuf_append(ctxt->om, &devOperStatus, sizeof (devOperStatus)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
-
-
-typedef enum CmdOpCode {
-    coNoOp = 0,
-    coRestartDevice,
-    coClearConfig,
-    coStartOtaUpdate,
-    coSetLogLevel,
-    coSetLogDest,
-    coSetUtcTime,
-    coSetUtcOffset,
-    coSetWiFi,
-    coDumpMlogFile,
-    coMax
-} CmdOpCode;
-
-typedef enum CmdStatus {
-    csIdle = 0,
-    csInProg,
-    csSuccess,
-    csFailed,
-    csInvOpCode,
-    csInvParam,
-} CmdStatus;
 
 static CmdStatus cmdStatus = csIdle;
 
@@ -232,7 +276,7 @@ static int setUtcOffsetCmd(struct os_mbuf *om)
     return 0;
 }
 
-static int setWiFiCmd(struct os_mbuf *om)
+static int setWiFiStateCmd(struct os_mbuf *om)
 {
     bool enabled = false;
 
@@ -248,6 +292,11 @@ static int setWiFiCmd(struct os_mbuf *om)
 static CmdStatus dumpMlogFileCmd(struct os_mbuf *om)
 {
     return (dumpMlogFile(true) == 0) ? csSuccess : csFailed;
+}
+
+static CmdStatus deleteMlogFileCmd(struct os_mbuf *om)
+{
+    return (deleteMlogFile(true) == 0) ? csSuccess : csFailed;
 }
 
 static int runCmd(struct ble_gatt_access_ctxt *ctxt)
@@ -300,12 +349,16 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
         cmdStatus = setUtcOffsetCmd(om);
         break;
 
-    case coSetWiFi:
-        cmdStatus = setWiFiCmd(om);
+    case coSetWiFiState:
+        cmdStatus = setWiFiStateCmd(om);
         break;
 
     case coDumpMlogFile:
         cmdStatus = dumpMlogFileCmd(om);
+        break;
+
+    case coDeleteMlogFile:
+        cmdStatus = deleteMlogFileCmd(om);
         break;
 
     default:
@@ -313,49 +366,52 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
         break;
     }
 
+    if (inbConnInfo.cmdReqIndicate) {
+        // Send the Command Status via a BLE indication
+        uint8_t cs = cmdStatus;
+        struct os_mbuf *om = ble_hs_mbuf_from_flat(&cs, sizeof (cs));
+        if (om != NULL) {
+            ble_gatts_indicate_custom(inbConnInfo.connHandle, inbConnInfo.cmdReqHandle, om);
+        }
+    }
+
     return 0;
 }
 
 #ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
 static const char *cmdHelp = \
-        "01: Restart\n"
-        "02: Clear Config\n"
-        "03: OTA Update\n"
-        "04: MLOG Level {0=No 1=Inf 2=Trc 3=Dbg}\n"
-        "05: MLOG Dest {0=Con 1=File 2=Both}\n"
-        "06: UTC Time {secs since Epoch}\n"
-        "07: UTC Offset {hrs from UTC}\n"
-        "08: WiFi State {0=Dis 1=Ena}\n"
-        "09: Dump MLOG.TXT\n";
+    "01: Restart\n"
+    "02: Clear Config\n"
+    "03: OTA Update\n"
+    "04: MLOG Level {0=No 1=Inf 2=Trc 3=Dbg}\n"
+    "05: MLOG Dest {0=Con 1=File 2=Both}\n"
+    "06: UTC Time {secs since Epoch}\n"
+    "07: UTC Offset {hrs from UTC}\n"
+    "08: WiFi State {0=Dis 1=Ena}\n"
+    "09: Dump MLOG.TXT\n"
+    "0A: Delete MLOG.TXT\n";
 #endif
-
-// Custom Device Config Service
-#define GATT_DEVICE_CONFIG_UUID             CONFIG_DEVICE_CONFIG_SERVICE_UUID
-#define GATT_WIFI_CREDENTIALS_UUID              (CONFIG_DEVICE_CONFIG_SERVICE_UUID+1)   // READ, WRITE
-#define GATT_WIFI_IP_ADDRESS_UUID               (CONFIG_DEVICE_CONFIG_SERVICE_UUID+2)   // READ
-#define GATT_COMMAND_UUID                       (CONFIG_DEVICE_CONFIG_SERVICE_UUID+3)   // READ, WRITE
-#define GATT_COMMAND_HELP_UUID                  (CONFIG_DEVICE_CONFIG_SERVICE_UUID+4)   // READ
 
 static int deviceConfigCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     uint16_t uuid = ble_uuid_u16(ctxt->chr->uuid);
 
-    if (uuid == GATT_WIFI_CREDENTIALS_UUID) {
+    if (uuid == GATT_DCS_WIFI_CREDENTIALS_UUID) {
         if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
             return getWiFiCredentials(ctxt);
         } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
             return setWiFiCredentials(ctxt);
         }
-    } else if (uuid == GATT_WIFI_IP_ADDRESS_UUID) {
-        return getWiFiIpAddress(ctxt);
-    } else if (uuid == GATT_COMMAND_UUID) {
+    } else if (uuid == GATT_DCS_OPERATING_STATUS_UUID) {
+        return getDevOperStatus(ctxt);
+    } else if (uuid == GATT_DCS_COMMAND_REQUEST_UUID) {
         if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
             return getCmdStatus(ctxt);
         } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
             return runCmd(ctxt);
         }
 #ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
-    } else if (uuid == GATT_COMMAND_HELP_UUID) {
+    } else if (uuid == GATT_DCS_COMMAND_HELP_UUID) {
         return (os_mbuf_append(ctxt->om, cmdHelp, strlen(cmdHelp)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 #endif
     }
@@ -368,35 +424,35 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
     {
         // Standard Device Information Service
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = BLE_UUID16_DECLARE(GATT_DEVICE_INFO_UUID),
+        .uuid = BLE_UUID16_DECLARE(GATT_DEVICE_INFO_SERVICE_UUID),
         .characteristics = (struct ble_gatt_chr_def[]) {
             {
                 // Manufacturer Name
-                .uuid = BLE_UUID16_DECLARE(GATT_MANUFACTURER_NAME_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DIS_MANUFACTURER_NAME_UUID),
                 .access_cb = deviceInfoCb,
                 .flags = BLE_GATT_CHR_F_READ,
             },
             {
                 // Model Number
-                .uuid = BLE_UUID16_DECLARE(GATT_MODEL_NUMBER_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DIS_MODEL_NUMBER_UUID),
                 .access_cb = deviceInfoCb,
                 .flags = BLE_GATT_CHR_F_READ,
             },
             {
                 // Serial Number
-                .uuid = BLE_UUID16_DECLARE(GATT_SERIAL_NUMBER_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DIS_SERIAL_NUMBER_UUID),
                 .access_cb = deviceInfoCb,
                 .flags = BLE_GATT_CHR_F_READ,
             },
             {
                 // Firmware Revision
-                .uuid = BLE_UUID16_DECLARE(GATT_FIRMWARE_REVISION_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DIS_FIRMWARE_REVISION_UUID),
                 .access_cb = deviceInfoCb,
                 .flags = BLE_GATT_CHR_F_READ,
             },
             {
                 // Hardware Revision
-                .uuid = BLE_UUID16_DECLARE(GATT_HARDWARE_REVISION_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DIS_HARDWARE_REVISION_UUID),
                 .access_cb = deviceInfoCb,
                 .flags = BLE_GATT_CHR_F_READ,
             },
@@ -409,30 +465,31 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
     {
         // Custom Device Configuration Service
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = BLE_UUID16_DECLARE(GATT_DEVICE_CONFIG_UUID),
+        .uuid = BLE_UUID16_DECLARE(GATT_DEVICE_CONFIG_SERVICE_UUID),
         .characteristics = (struct ble_gatt_chr_def[]) {
             {
                 // WiFi Credentials
-                .uuid = BLE_UUID16_DECLARE(GATT_WIFI_CREDENTIALS_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DCS_WIFI_CREDENTIALS_UUID),
                 .access_cb = deviceConfigCb,
-                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
             },
             {
                 // WiFi IP Address
-                .uuid = BLE_UUID16_DECLARE(GATT_WIFI_IP_ADDRESS_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DCS_OPERATING_STATUS_UUID),
                 .access_cb = deviceConfigCb,
                 .flags = BLE_GATT_CHR_F_READ,
             },
             {
                 // Command Request
-                .uuid = BLE_UUID16_DECLARE(GATT_COMMAND_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DCS_COMMAND_REQUEST_UUID),
                 .access_cb = deviceConfigCb,
-                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE
+                .val_handle = &inbConnInfo.cmdReqHandle,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_INDICATE,
             },
 #ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
             {
                 // Command Help
-                .uuid = BLE_UUID16_DECLARE(GATT_COMMAND_HELP_UUID),
+                .uuid = BLE_UUID16_DECLARE(GATT_DCS_COMMAND_HELP_UUID),
                 .access_cb = deviceConfigCb,
                 .flags = BLE_GATT_CHR_F_READ,
             },
@@ -456,16 +513,6 @@ const char *fmtBleMac(const uint8_t *addr)
             addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
     return buf;
 }
-
-// Inbound Connection Information
-typedef struct InbConnInfo {
-    time_t connTime;
-    uint16_t connHandle;
-    bool connEstablished;
-    ble_addr_t peerAddr;
-} InbConnInfo;
-
-static InbConnInfo inbConnInfo;
 
 static int procConnectEvent(const struct ble_gap_event *event)
 {
@@ -516,11 +563,15 @@ static int procNotificationTxEvent(const struct ble_gap_event *event)
 
 static int procSubscribeEvent(const struct ble_gap_event *event)
 {
-    // When the iOS LightBlue mobile app connects, it
-    // enables indications on the characteristic with
-    // the attribute handle 8, which we don't care...
-    if (event->subscribe.attr_handle != 8) {
-        mlog(info, "BLE_GAP_EVENT_SUBSCRIBE: connHandle=%u valHandle=%u notify=%u indicate=%u", event->subscribe.conn_handle, event->subscribe.attr_handle, event->subscribe.cur_notify, event->subscribe.cur_indicate);
+    uint16_t attrHandle = event->subscribe.attr_handle;
+
+    if (attrHandle == 8) {
+        // When the iOS LightBlue mobile app connects, it
+        // enables indications on the characteristic with
+        // the attribute handle 8, which we don't care...
+    } else if (attrHandle == inbConnInfo.cmdReqHandle) {
+        inbConnInfo.cmdReqIndicate = event->subscribe.cur_indicate;
+        mlog(info, "Command Request indications %sabled!", (inbConnInfo.cmdReqIndicate) ? "en" : "dis");
     }
 
     return 0;
@@ -596,22 +647,19 @@ static int nimbleGapEventCb(struct ble_gap_event *event, void *arg)
 }
 
 
-static uint8_t advAddrType;
-
 static void nimbleAdvertise(void)
 {
-    ble_addr_t advAddr = {0};
     struct ble_gap_adv_params advParams = {0};  // ADV_IND
     struct ble_hs_adv_fields rspFields = {0};   // SCAN_RSP
     struct ble_hs_adv_fields advFields = {0};
     const char *devName = ble_svc_gap_device_name();
     int rc;
 
-    if ((rc = ble_hs_id_infer_auto(false, &advAddrType)) != 0) {
+    if ((rc = ble_hs_id_infer_auto(false, &inbConnInfo.ourAddr.type)) != 0) {
         mlog(fatal, "ble_hs_id_infer_auto: rc=%d", rc);
     }
 
-    if ((rc = ble_hs_id_copy_addr(advAddrType, advAddr.val, NULL)) != 0) {
+    if ((rc = ble_hs_id_copy_addr(inbConnInfo.ourAddr.type, inbConnInfo.ourAddr.val, NULL)) != 0) {
         mlog(fatal, "ble_hs_id_copy_addr: rc=%d", rc);
     }
 
@@ -646,7 +694,7 @@ static void nimbleAdvertise(void)
 #ifdef DEVICE_INFO_SERVICE
     // Device Info Service
     rspFields.uuids16 = (ble_uuid16_t[]) {
-        BLE_UUID16_INIT(GATT_DEVICE_INFO_UUID)
+        BLE_UUID16_INIT(GATT_DEVICE_INFO_SERVICE_UUID)
     };
     rspFields.num_uuids16 = 1;
     rspFields.uuids16_is_complete = true;
@@ -659,7 +707,7 @@ static void nimbleAdvertise(void)
     /* Begin advertising */
     advParams.conn_mode = BLE_GAP_CONN_MODE_UND;
     advParams.disc_mode = BLE_GAP_DISC_MODE_GEN;
-    if ((rc = ble_gap_adv_start(advAddrType, NULL, BLE_HS_FOREVER, &advParams, nimbleGapEventCb, NULL)) != 0) {
+    if ((rc = ble_gap_adv_start(inbConnInfo.ourAddr.type, NULL, BLE_HS_FOREVER, &advParams, nimbleGapEventCb, NULL)) != 0) {
         if (rc != BLE_HS_EALREADY) {
             mlog(fatal, "ble_gap_adv_start: rc=0x%03x", rc);
         }
