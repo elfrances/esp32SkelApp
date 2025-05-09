@@ -166,16 +166,26 @@ void appMainTask(void *parms)
 > [!NOTE]
 > If your app needs to store any data in non-volatile storage, you can extend **SkelApp**'s AppConfigInfo structure, defined in myNewApp/main/app.h.  AppConfigInfo is stored in the NVM partition of the flash memory, and is loaded early on during app start up.
 
+```
+// App configuration info
+typedef struct AppConfigInfo {
+    WiFiConfigInfo wifiConfigInfo;
+    int8_t utcOffset;
+
+    // Custom app config goes here
+
+} AppConfigInfo;
+```
 
 # BLE Peripheral Feature
 
-**SkelApp** operates as a BLE peripheral device that advertises itself under the name "SKELAPP-NNNN", where NNNN are four hex digits derived from the serial number of the device.
+**SkelApp** operates as a BLE peripheral device that advertises itself under the name "BLE_ADV_NAME-NNNN", where BLE_ADV_NAME is the string value set in the sdkconfig, and NNNN are four hex digits derived from the serial number of the device.
 
 It advertises the following BLE services:
 
 1. The standard Bluetooth SIG "Device Information Service" (DIS), which is used to report the app's serial number, firmware version, etc.
 
-2. A custom "Device Configuration Service" (DCS), which can be used to manually configure the WiFi credentials, set the UTC offset, perform a firmware upgrade, restart the device, etc.  This service uses a configurable 16-bit UUID, and can be accessed using a generic BLE explorer app, such as [LightBlue](https://punchthrough.com/lightblue/) or by using a custom-designed iOS/Android app.
+2. A custom "Device Configuration Service" (DCS), which can be used to manually configure the WiFi credentials, set the UTC offset, perform a firmware upgrade, restart the device, etc.  This service uses a configurable 16-bit UUID, and can be accessed using a generic BLE explorer app, such as [LightBlue](https://punchthrough.com/lightblue/), or by using a custom-designed iOS/Android app.
 
 The characteristics in the DCS get their UUID's from the UUID of the service, such that characteristic number N gets assigned the value: DCS UUID plus N.
 
