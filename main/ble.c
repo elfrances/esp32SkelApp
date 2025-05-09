@@ -473,7 +473,7 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
             },
             {
-                // WiFi IP Address
+                // Operating Status
                 .uuid = BLE_UUID16_DECLARE(GATT_DCS_OPERATING_STATUS_UUID),
                 .access_cb = deviceConfigCb,
                 .flags = BLE_GATT_CHR_F_READ,
@@ -690,14 +690,19 @@ static void nimbleAdvertise(void)
         mlog(fatal, "ble_gap_adv_set_fields: rc=%d", rc);
     }
 
-#ifdef DEVICE_INFO_SERVICE
-    // Device Info Service
     rspFields.uuids16 = (ble_uuid16_t[]) {
-        BLE_UUID16_INIT(GATT_DEVICE_INFO_SERVICE_UUID)
-    };
-    rspFields.num_uuids16 = 1;
-    rspFields.uuids16_is_complete = true;
+#ifdef CONFIG_DEVICE_INFO_SERVICE
+        // Device Info Service
+        BLE_UUID16_INIT(GATT_DEVICE_INFO_SERVICE_UUID),
 #endif
+        // Device Config Service
+        BLE_UUID16_INIT(GATT_DEVICE_CONFIG_SERVICE_UUID),
+    };
+#ifdef CONFIG_DEVICE_INFO_SERVICE
+    rspFields.num_uuids16++;
+#endif
+    rspFields.num_uuids16++;
+    rspFields.uuids16_is_complete = true;
 
     if ((rc = ble_gap_adv_rsp_set_fields(&rspFields)) != 0) {
         mlog(fatal, "ble_gap_adv_rsp_set_fields: rc=%d", rc);
