@@ -203,7 +203,7 @@ For example, if the SSID is "HomeSweetHome" and the Password is "TopSecret!", th
 
 Properties: READ
 
-This read-only characteristic is used to obtain the operating status of the ESP32-C3 device. The data has the following format:
+This read-only characteristic is used to obtain the operating status of the ESP32 device. The data has the following format:
 
 | Offset | Description | Data |
 | ------ | ----------- | ---- |
@@ -224,7 +224,7 @@ All values are stored using Bluetooth's native little-endian encoding.
 
 Properties: READ WRITE INDICATE
 
-This characteristic is used to direct the ESP32-C3 device to execute a command.  The supported commands are:
+This characteristic is used to direct the ESP32 device to execute a command.  The supported commands are:
 
 | OpCode | Command | Parameters |
 | ------ | ------- | ---------- |
@@ -256,7 +256,7 @@ Reading this characteristic returns the command execution status, which consists
 | 0x04 | Invalid OpCode |
 | 0x05 | Invalid Parameter |
 
-If indications are enabled, the command execution status is sent in a BLE indication right after the operation completes.
+If indications are enabled on this characteristic, the command execution status is sent in a BLE indication right after the operation completes.
 
 ### FE04: Command Help
 
