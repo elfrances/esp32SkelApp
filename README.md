@@ -193,7 +193,7 @@ The DCS supports the following characteristics (assuming the default DCS UUID 0x
 
 ### FE01: WiFi Credentials
 
-Properties: READ,WRITE
+Properties: READ WRITE
 
 This characteristic is used to manually set the WiFi credentials. The value is a UTF-8 string that includes the SSID and Password strings concatenated together, using the character sequence "###" as a separator.
 
@@ -222,7 +222,7 @@ All values are stored using Bluetooth's native little-endian encoding.
 
 ### FE03: Command Request
 
-Properties: READ,WRITE,INDICATE
+Properties: READ WRITE INDICATE
 
 This characteristic is used to direct the ESP32-C3 device to execute a command.  The supported commands are:
 
@@ -262,7 +262,7 @@ If indications are enabled, the command execution status is sent in a BLE indica
 
 Properties: READ
 
-This characteristic can be used to get help about the commands supported by the Command Request characteristic. When read, it returns the following UTF-8 string:
+This optional characteristic can be used to get help about the commands supported by the Command Request characteristic. When read, it returns the following UTF-8 string:
 
 ```
 01: Restart
@@ -274,6 +274,7 @@ This characteristic can be used to get help about the commands supported by the 
 07: UTC Offset
 08: WiFi State {0=Dis 1=Ena}
 09: Dump MLOG.TXT
+0A: Delete MLOG.TXT
 ```
 
 # Example
