@@ -208,6 +208,8 @@ This read-only characteristic is used to obtain the operating status of the ESP3
 | 0x22   | Max Free Block | {UINT16: Max Free Memory Block in KB} |
 | 0x24   | TBD | |
 
+All values are stored using Bluetooth's native little-endian encoding.
+
 ### FE03: Command Request
 
 Properties: READ,WRITE,INDICATE
