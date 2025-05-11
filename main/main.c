@@ -1,5 +1,8 @@
+#include <assert.h>
 #include <dirent.h>
 #include <stdlib.h>
+
+#include "sdkconfig.h"
 
 #include "app.h"
 #include "ble.h"
@@ -10,6 +13,21 @@
 #include "nvram.h"
 #include "timeval.h"
 #include "wifi.h"
+
+// Check the consistency of some critical SkelApp
+// sdkconfig settings.
+#ifdef CONFIG_RGB_LED
+_Static_assert((CONFIG_RGB_LED_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "RGB_LED_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
+#endif
+#ifdef CONFIG_BLE_PERIPHERAL
+_Static_assert((CONFIG_BLE_HOST_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "BLE_HOST_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
+#endif
+#ifdef CONFIG_OTA_UPDATE
+_Static_assert((CONFIG_OTA_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "CONFIG_OTA_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
+#endif
+#ifdef CONFIG_APP_MAIN_TASK
+_Static_assert((CONFIG_MAIN_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "CONFIG_MAIN_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
+#endif
 
 #if CONFIG_WIFI_NTP
 // Configure SNTP and get the current date and time
@@ -171,10 +189,12 @@ void app_main(void)
     }
 #endif
 
+#ifdef CONFIG_RGB_LED
     // Initialize the LED API
     if (ledInit() != 0) {
         mlog(fatal, "ledInit");
     }
+#endif
 
     err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {

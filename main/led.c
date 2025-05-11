@@ -189,7 +189,6 @@ int ledInit(void)
 }
 
 #else
-
 int ledSet(LedMode mode, LedColor color)
 {
     return 0;

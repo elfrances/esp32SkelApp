@@ -20,6 +20,7 @@
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
+#include "esp_timer.h"
 #include "esp_vfs.h"
 #include "esp_vfs_dev.h"
 #include "esp_vfs_fat.h"

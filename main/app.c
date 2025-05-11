@@ -114,45 +114,69 @@ int deleteMlogFile(bool warn)
 }
 
 #ifdef CONFIG_APP_MAIN_TASK
-// App initialization
-static int appInit(void)
+// Wake up the appMainTask
+static void wakeupTimerCb(void *arg)
+{
+    const TaskHandle_t appMainHandle = *(TaskHandle_t *) arg;
+    xTaskNotifyGive(appMainHandle);
+}
+
+// Custom app initialization
+static int appCustInit(void)
 {
     // TBD
     return 0;
 }
 
 // This is the app's main task. It runs an infinite work
-// loop, keeping a constant wake up interval.
+// loop, trying its best to keep a constant wake up interval.
 void appMainTask(void *parms)
 {
-    const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
+    const TaskHandle_t appMainHandle = xTaskGetCurrentTaskHandle();
+    const uint64_t wakeupPeriod = CONFIG_MAIN_TASK_WAKEUP_PERIOD * 1000;    // in usec
+    esp_timer_create_args_t wakeupTimerArgs = {0};
+    esp_timer_handle_t wakeupTimerHandle;
 
-    // Initialize whatever is needed before entering
-    // the infinite work loop.
-    if (appInit() != 0) {
-        mlog(fatal, "App initialization failed!");
+    // Create the ESP Timer used to post the
+    // wake up events.
+    wakeupTimerArgs.callback = wakeupTimerCb;
+    wakeupTimerArgs.arg = (void *) &appMainHandle;
+    wakeupTimerArgs.dispatch_method = ESP_TIMER_ISR;
+    wakeupTimerArgs.name = "wakeupTmr";
+    if (esp_timer_create(&wakeupTimerArgs, &wakeupTimerHandle) != ESP_OK) {
+        mlog(fatal, "Failed to create wakeupTimer!");
+    }
+
+    // Do any custom app initialization before
+    // entering the infinite work loop.
+    if (appCustInit() != 0) {
+        mlog(fatal, "Custom app initialization failed!");
     }
 
     while (true) {
-        TickType_t startTicks, elapsedTicks;
+        uint64_t startTime, elapsedTime;
 
         // Record the start of this new pass of our
         // work loop.
-        startTicks = xTaskGetTickCount();
+        startTime = esp_timer_get_time();
 
         // Custom app code goes here...
         mlog(trace, "Hello world!");
 
         // Figure out how much time we spent so far
-        elapsedTicks = xTaskGetTickCount() - startTicks;
+        elapsedTime = esp_timer_get_time() - startTime;
 
-        if (elapsedTicks < wakeupPeriodTicks) {
+        if (elapsedTime < wakeupPeriod) {
             // Sleep until the next poll period...
-            TickType_t delayTicks = wakeupPeriodTicks - elapsedTicks;
-            vTaskDelay(delayTicks);
-        } else if (elapsedTicks > wakeupPeriodTicks) {
+            uint64_t sleepTime = wakeupPeriod - elapsedTime;
+            if (esp_timer_start_once(wakeupTimerHandle, sleepTime) != ESP_OK) {
+                mlog(fatal, "Failed to start wakeupTimer!");
+            }
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        } else if (elapsedTime > wakeupPeriod) {
             // Oops! We exceeded the required wake up period!
-            mlog(warning, "Wakeup period exceeded by %lu ms !!!", pdTICKS_TO_MS(elapsedTicks - wakeupPeriodTicks));
+            uint32_t exceedTime = (elapsedTime - wakeupPeriod);
+            mlog(warning, "Wakeup period exceeded by %lu.%06lu ms !!!", (exceedTime / 1000), (exceedTime % 1000));
         }
     }
 

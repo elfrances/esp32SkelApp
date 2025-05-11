@@ -369,12 +369,11 @@ menu "SkelApp Configuration"
     config MAIN_TASK_WAKEUP_PERIOD
         int "App Main Task Wakeup Period"
         depends on APP_MAIN_TASK
+        range 10 10000
         default 1000
         help
             The period (in milliseconds) of the main task's wakeup
-            event.  The value should be a multiple of the system's
-            clock tick period, as defined by FREERTOS_HZ, which is
-            usually 10 ms.
+            event.
 
     menuconfig FAT_FS
         bool "FAT File System"
