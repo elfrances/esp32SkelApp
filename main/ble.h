@@ -31,7 +31,7 @@ typedef struct DevOperStatus {
 
 // Command Op Code
 typedef enum CmdOpCode {
-    coNoOp = 0,
+    coNoOp = 0x00,
     coRestartDevice,
     coClearConfig,
     coStartOtaUpdate,
@@ -44,14 +44,26 @@ typedef enum CmdOpCode {
     coDeleteMlogFile,
 } CmdOpCode;
 
+// Command Request
+typedef struct CmdReq {
+    uint8_t opCode;
+    uint8_t params[0];
+} CmdReq;
+
 // Command Status Code
-typedef enum CmdStatus {
-    csIdle = 0,
+typedef enum CmdStatusCode {
+    csIdle = 0x00,
     csInProg,
     csSuccess,
     csFailed,
     csInvOpCode,
     csInvParam,
+} CmdStatusCode;
+
+// Command Status
+typedef struct CmdStatus {
+    uint8_t opCode;
+    uint8_t status;
 } CmdStatus;
 
 __BEGIN_DECLS

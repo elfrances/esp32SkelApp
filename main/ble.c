@@ -182,25 +182,24 @@ static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
     return (os_mbuf_append(ctxt->om, &devOperStatus, sizeof (devOperStatus)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
-static CmdStatus cmdStatus = csIdle;
+static CmdStatus cmdStatus = { .opCode = coNoOp, .status = csIdle };
 
 static int getCmdStatus(struct ble_gatt_access_ctxt *ctxt)
 {
-    uint8_t cs = cmdStatus;
-    return (os_mbuf_append(ctxt->om, &cs, sizeof (cs)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+    return (os_mbuf_append(ctxt->om, &cmdStatus, sizeof (cmdStatus)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
-static CmdStatus restartDeviceCmd(struct os_mbuf *om)
+static CmdStatusCode restartDeviceCmd(struct os_mbuf *om)
 {
     return (restartDevice() == 0) ? csSuccess : csFailed;
 }
 
-static CmdStatus clearConfigCmd(struct os_mbuf *om)
+static CmdStatusCode clearConfigCmd(struct os_mbuf *om)
 {
     return (clearConfig() == 0) ? csSuccess : csFailed;
 }
 
-static CmdStatus startOtaUpdateCmd(struct os_mbuf *om)
+static CmdStatusCode startOtaUpdateCmd(struct os_mbuf *om)
 {
 #ifdef CONFIG_OTA_UPDATE
     return (otaUpdateStart() == 0) ? csSuccess : csFailed;
@@ -209,7 +208,7 @@ static CmdStatus startOtaUpdateCmd(struct os_mbuf *om)
 #endif
 }
 
-static CmdStatus setLogLevelCmd(struct os_mbuf *om)
+static CmdStatusCode setLogLevelCmd(struct os_mbuf *om)
 {
     LogLevel logLevel;
 
@@ -226,7 +225,7 @@ static CmdStatus setLogLevelCmd(struct os_mbuf *om)
     return csSuccess;
 }
 
-static CmdStatus setLogDestCmd(struct os_mbuf *om)
+static CmdStatusCode setLogDestCmd(struct os_mbuf *om)
 {
     LogDest logDest;
 
@@ -288,12 +287,12 @@ static int setWiFiStateCmd(struct os_mbuf *om)
     return (wifiEnable(enabled) == 0) ? csSuccess : csFailed;
 }
 
-static CmdStatus dumpMlogFileCmd(struct os_mbuf *om)
+static CmdStatusCode dumpMlogFileCmd(struct os_mbuf *om)
 {
     return (dumpMlogFile(true) == 0) ? csSuccess : csFailed;
 }
 
-static CmdStatus deleteMlogFileCmd(struct os_mbuf *om)
+static CmdStatusCode deleteMlogFileCmd(struct os_mbuf *om)
 {
     return (deleteMlogFile(true) == 0) ? csSuccess : csFailed;
 }
@@ -301,74 +300,75 @@ static CmdStatus deleteMlogFileCmd(struct os_mbuf *om)
 static int runCmd(struct ble_gatt_access_ctxt *ctxt)
 {
     struct os_mbuf *om = ctxt->om;
-    CmdOpCode opCode;
+    CmdStatusCode csc;
 
     if ((om == NULL) || (om->om_len < 1)) {
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
 
-    if (cmdStatus == csInProg) {
+    if (cmdStatus.status == csInProg) {
         // Last command still in progress
         return 0;
     }
 
-    opCode = om->om_data[0];
-    cmdStatus = csInProg;
+    cmdStatus.opCode = om->om_data[0];
+    cmdStatus.status = csInProg;
 
-    switch (opCode) {
+    switch (cmdStatus.opCode) {
     case coNoOp:
-        cmdStatus = csSuccess;
+        csc = csSuccess;
         break;
 
     case coRestartDevice:
-        cmdStatus = restartDeviceCmd(om);
+        csc = restartDeviceCmd(om);
         break;
 
     case coClearConfig:
-        cmdStatus = clearConfigCmd(om);
+        csc = clearConfigCmd(om);
         break;
 
     case coStartOtaUpdate:
-        cmdStatus = startOtaUpdateCmd(om);
+        csc = startOtaUpdateCmd(om);
         break;
 
     case coSetLogLevel:
-        cmdStatus = setLogLevelCmd(om);
+        csc = setLogLevelCmd(om);
         break;
 
     case coSetLogDest:
-        cmdStatus = setLogDestCmd(om);
+        csc = setLogDestCmd(om);
         break;
 
     case coSetUtcTime:
-        cmdStatus = setUtcTimeCmd(om);
+        csc = setUtcTimeCmd(om);
         break;
 
     case coSetUtcOffset:
-        cmdStatus = setUtcOffsetCmd(om);
+        csc = setUtcOffsetCmd(om);
         break;
 
     case coSetWiFiState:
-        cmdStatus = setWiFiStateCmd(om);
+        csc = setWiFiStateCmd(om);
         break;
 
     case coDumpMlogFile:
-        cmdStatus = dumpMlogFileCmd(om);
+        csc = dumpMlogFileCmd(om);
         break;
 
     case coDeleteMlogFile:
-        cmdStatus = deleteMlogFileCmd(om);
+        csc = deleteMlogFileCmd(om);
         break;
 
     default:
-        cmdStatus = csInvOpCode;
+        csc = csInvOpCode;
         break;
     }
 
+    cmdStatus.status = csc;
+
     if (inbConnInfo.cmdReqIndicate) {
         // Send the Command Status via a BLE indication
-        uint8_t cs = cmdStatus;
-        struct os_mbuf *om = ble_hs_mbuf_from_flat(&cs, sizeof (cs));
+        struct os_mbuf *om = ble_hs_mbuf_from_flat(&cmdStatus, sizeof (cmdStatus));
         if (om != NULL) {
             ble_gatts_indicate_custom(inbConnInfo.connHandle, inbConnInfo.cmdReqHandle, om);
         }
@@ -782,8 +782,8 @@ int bleInit(void)
     }
 
     // Start the NimBLE Host task
-    if ((rc = xTaskCreatePinnedToCore(nimbleHostTask, "bleHostTask", CONFIG_NIMBLE_TASK_STACK_SIZE,
-                                      NULL, CONFIG_BLE_HOST_TASK_PRIO, NULL, tskNO_AFFINITY)) != pdPASS) {
+    if ((rc = xTaskCreatePinnedToCore(nimbleHostTask, "bleHostTask", CONFIG_BLE_HOST_TASK_STACK,
+                                      NULL, CONFIG_BLE_HOST_TASK_PRIO, NULL, CONFIG_BLE_HOST_TASK_CPU)) != pdPASS) {
         mlog(fatal, "xTaskCreatePinnedToCore: rc=%d", rc);
     }
 

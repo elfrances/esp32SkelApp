@@ -217,7 +217,7 @@ static void otaUpdTask(void *arg)
 
 int otaUpdateStart(void)
 {
-    if (xTaskCreatePinnedToCore(otaUpdTask, "otaUpd", CONFIG_OTA_TASK_STACK, NULL, CONFIG_OTA_TASK_PRIO, NULL, tskNO_AFFINITY) != pdPASS) {
+    if (xTaskCreatePinnedToCore(otaUpdTask, "otaUpd", CONFIG_OTA_TASK_STACK, NULL, CONFIG_OTA_TASK_PRIO, NULL, CONFIG_OTA_TASK_CPU) != pdPASS) {
         mlog(error, "Failed to start otaUpdTask!");
         return -1;
     }
