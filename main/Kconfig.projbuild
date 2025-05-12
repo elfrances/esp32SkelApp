@@ -175,7 +175,7 @@ menu "SkelApp Configuration"
             in the advertisements has the suffix "-NNNN" appended to it, where 
             NNNN are four hex digits derived from the serial number of the device.
 
-    config DEVICE_INFO_SERVICE
+    menuconfig DEVICE_INFO_SERVICE
         bool "Device Information Service"
         depends on BLE_PERIPHERAL
         default y
