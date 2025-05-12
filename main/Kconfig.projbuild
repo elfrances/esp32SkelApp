@@ -319,13 +319,13 @@ menu "SkelApp Configuration"
         default 0x1 if OTA_TASK_CPU_CORE1
  
      menuconfig APP_MAIN_TASK
-         bool "App Main Task"
+         bool "AppMain Task"
          default y
         help
             Have app_main() spawn the event-driven appMainTask, and exit.
      
      config MAIN_TASK_PRIO
-        int "App Main Task Priority"
+        int "Priority"
         depends on APP_MAIN_TASK
         range 0 24
         default 10
@@ -335,7 +335,7 @@ menu "SkelApp Configuration"
             The valid range is: 0 to (configMAX_PRIORITIES-1).
                    
     config MAIN_TASK_STACK
-        int "App Main Task Stack Size"
+        int "Stack Size"
         depends on APP_MAIN_TASK
         range 3072 8192
         default 4096
@@ -344,7 +344,7 @@ menu "SkelApp Configuration"
             during start up.
             
     choice MAIN_TASK_CPU
-        prompt "App Main Task CPU Affinity"
+        prompt "CPU Affinity"
         depends on APP_MAIN_TASK
         default MAIN_TASK_CPU_NO_AFFINITY
         help
@@ -356,7 +356,6 @@ menu "SkelApp Configuration"
             bool "CPU0"
         config MAIN_TASK_CPU_CORE1 
             bool "CPU1"
-        
     endchoice
                 
     config MAIN_TASK_CPU
@@ -365,15 +364,43 @@ menu "SkelApp Configuration"
         default FREERTOS_NO_AFFINITY if MAIN_TASK_CPU_NO_AFFINITY
         default 0x0 if MAIN_TASK_CPU_CORE0
         default 0x1 if MAIN_TASK_CPU_CORE1
-                
-    config MAIN_TASK_WAKEUP_PERIOD
-        int "App Main Task Wakeup Period"
+
+    choice MAIN_TASK_WAKEUP_METHOD
+        prompt "Wakeup Method"
         depends on APP_MAIN_TASK
-        range 10 10000
+        default APP_MAIN_TASK_WAKEUP_METHOD_TASK_DELAY
+        help
+            The wake up method used by the AppMain task.
+
+        config APP_MAIN_TASK_WAKEUP_METHOD_TASK_DELAY
+            bool "Task Delay"
+        config APP_MAIN_TASK_WAKEUP_METHOD_ESP_TIMER
+            bool "Timer Alarm"
+    endchoice
+    
+    config MAIN_TASK_WAKEUP_METHOD
+        int
+        depends on APP_MAIN_TASK
+        default 0 if APP_MAIN_TASK_WAKEUP_METHOD_TASK_DELAY
+        default 1 if APP_MAIN_TASK_WAKEUP_METHOD_ESP_TIMER
+    
+    config MAIN_TASK_WAKEUP_PERIOD
+        int "Wakeup Period"
+        depends on APP_MAIN_TASK
+        range 1 10000
         default 1000
         help
             The period (in milliseconds) of the main task's wakeup
-            event.
+            event. When MAIN_TASK_WAKEUP_METHOD is TASK_DELAY, this 
+            value must be consistent with the period of the system 
+            clock tick as defined by CONFIG_FREERTOS_HZ.
+            
+    config MAIN_TASK_TIME_WORK_LOOP
+        bool "Time Work Loop"
+        depends on APP_MAIN_TASK
+        default n
+        help
+            Time the execution of the main tasks's work loop.
 
     menuconfig FAT_FS
         bool "FAT File System"

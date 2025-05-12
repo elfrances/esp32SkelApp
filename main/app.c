@@ -114,13 +114,6 @@ int deleteMlogFile(bool warn)
 }
 
 #ifdef CONFIG_APP_MAIN_TASK
-// Wake up the appMainTask
-static void wakeupTimerCb(void *arg)
-{
-    const TaskHandle_t appMainHandle = *(TaskHandle_t *) arg;
-    xTaskNotifyGive(appMainHandle);
-}
-
 // Custom app initialization
 static int appCustInit(void)
 {
@@ -130,18 +123,69 @@ static int appCustInit(void)
 
 // This is the app's main task. It runs an infinite work
 // loop, trying its best to keep a constant wake up interval.
+#if CONFIG_APP_MAIN_TASK_WAKEUP_METHOD_TASK_DELAY
+void appMainTask(void *parms)
+{
+    const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
+
+    // Do any custom app initialization before
+    // entering the infinite work loop.
+    if (appCustInit() != 0) {
+        mlog(fatal, "Custom app initialization failed!");
+    }
+
+    while (true) {
+        TickType_t startTicks, elapsedTicks;
+
+        // Record the start of this new pass of our
+        // work loop.
+        startTicks = xTaskGetTickCount();
+
+        // Custom app code goes here...
+        mlog(info, "TICK!");
+
+        // Figure out how much time we spent so far
+        elapsedTicks = xTaskGetTickCount() - startTicks;
+
+        if (elapsedTicks < wakeupPeriodTicks) {
+            // Sleep until the next poll period...
+            TickType_t delayTicks = wakeupPeriodTicks - elapsedTicks;
+            vTaskDelay(delayTicks);
+        } else if (elapsedTicks > wakeupPeriodTicks) {
+            // Oops! We exceeded the required wake up period!
+            mlog(warning, "%u ms wakeup period exceeded by %lu ms !!!", CONFIG_MAIN_TASK_WAKEUP_PERIOD, pdTICKS_TO_MS(elapsedTicks - wakeupPeriodTicks));
+        }
+    }
+
+    vTaskDelete(NULL);
+}
+#else
+// Wake up the appMainTask
+static void wakeupTimerCb(void *arg)
+{
+    const TaskHandle_t appMainHandle = *(TaskHandle_t *) arg;
+    xTaskNotifyGive(appMainHandle);
+}
+
 void appMainTask(void *parms)
 {
     const TaskHandle_t appMainHandle = xTaskGetCurrentTaskHandle();
     const uint64_t wakeupPeriod = CONFIG_MAIN_TASK_WAKEUP_PERIOD * 1000;    // in usec
     esp_timer_create_args_t wakeupTimerArgs = {0};
     esp_timer_handle_t wakeupTimerHandle;
+#ifdef CONFIG_MAIN_TASK_TIME_WORK_LOOP
+    uint64_t workLoopCount = 0;
+    uint64_t sumWorkLoopTime = 0;
+    uint64_t minWorkLoopTime = UINT64_MAX;
+    uint64_t maxWorkLoopTime = 0;
+    uint64_t avgWorkLoopTime = 0;
+#endif
 
     // Create the ESP Timer used to post the
     // wake up events.
     wakeupTimerArgs.callback = wakeupTimerCb;
     wakeupTimerArgs.arg = (void *) &appMainHandle;
-    wakeupTimerArgs.dispatch_method = ESP_TIMER_ISR;
+    wakeupTimerArgs.dispatch_method = ESP_TIMER_TASK;
     wakeupTimerArgs.name = "wakeupTmr";
     if (esp_timer_create(&wakeupTimerArgs, &wakeupTimerHandle) != ESP_OK) {
         mlog(fatal, "Failed to create wakeupTimer!");
@@ -161,25 +205,43 @@ void appMainTask(void *parms)
         startTime = esp_timer_get_time();
 
         // Custom app code goes here...
-        mlog(trace, "Hello world!");
+        mlog(info, "TICK!");
 
         // Figure out how much time we spent so far
         elapsedTime = esp_timer_get_time() - startTime;
 
         if (elapsedTime < wakeupPeriod) {
-            // Sleep until the next poll period...
+            // Set up the wake up alarm ...
             uint64_t sleepTime = wakeupPeriod - elapsedTime;
             if (esp_timer_start_once(wakeupTimerHandle, sleepTime) != ESP_OK) {
                 mlog(fatal, "Failed to start wakeupTimer!");
             }
+
+            // ... and go to sleep
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         } else if (elapsedTime > wakeupPeriod) {
             // Oops! We exceeded the required wake up period!
             uint32_t exceedTime = (elapsedTime - wakeupPeriod);
-            mlog(warning, "Wakeup period exceeded by %lu.%06lu ms !!!", (exceedTime / 1000), (exceedTime % 1000));
+            mlog(warning, "%u ms wakeup period exceeded by %lu.%03lu ms !!!", CONFIG_MAIN_TASK_WAKEUP_PERIOD, (exceedTime / 1000), (exceedTime % 1000));
         }
+
+#ifdef CONFIG_MAIN_TASK_TIME_WORK_LOOP
+        uint64_t wakeupTime = esp_timer_get_time();
+        uint64_t workLoopTime = wakeupTime - startTime;
+        if (workLoopTime < minWorkLoopTime) {
+            minWorkLoopTime = workLoopTime;
+        } else if (workLoopTime > maxWorkLoopTime) {
+            maxWorkLoopTime = workLoopTime;
+        }
+        sumWorkLoopTime += workLoopTime;
+        avgWorkLoopTime = sumWorkLoopTime / ++workLoopCount;
+        if ((workLoopCount % (1000 / CONFIG_MAIN_TASK_WAKEUP_PERIOD)) == 0) {
+            mlog(trace, "Work Loop Time Stats: min=%llu avg=%llu max=%llu", minWorkLoopTime, avgWorkLoopTime, maxWorkLoopTime);
+        }
+#endif
     }
 
     vTaskDelete(NULL);
 }
 #endif
+#endif  // CONFIG_APP_MAIN_TASK

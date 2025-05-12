@@ -23,10 +23,14 @@ _Static_assert((CONFIG_RGB_LED_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "RGB_LE
 _Static_assert((CONFIG_BLE_HOST_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "BLE_HOST_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
 #endif
 #ifdef CONFIG_OTA_UPDATE
-_Static_assert((CONFIG_OTA_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "CONFIG_OTA_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
+_Static_assert((CONFIG_OTA_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "OTA_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
 #endif
 #ifdef CONFIG_APP_MAIN_TASK
-_Static_assert((CONFIG_MAIN_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "CONFIG_MAIN_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
+_Static_assert((CONFIG_MAIN_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "MAIN_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
+#if CONFIG_APP_MAIN_TASK_WAKEUP_METHOD_TASK_DELAY
+_Static_assert((CONFIG_MAIN_TASK_WAKEUP_PERIOD >= (1000 / CONFIG_FREERTOS_HZ)), "MAIN_TASK_WAKEUP_PERIOD is lower than the RTOS tick period !");
+_Static_assert((CONFIG_MAIN_TASK_WAKEUP_PERIOD % (1000 / CONFIG_FREERTOS_HZ) == 0), "MAIN_TASK_WAKEUP_PERIOD is not a multiple of the RTOS tick period !");
+#endif
 #endif
 
 #if CONFIG_WIFI_NTP

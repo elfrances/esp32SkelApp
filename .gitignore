@@ -77,4 +77,5 @@ firmware_update_server/esp32*
 *.bak
 *.swp
 *.orig
+*.rej
 
