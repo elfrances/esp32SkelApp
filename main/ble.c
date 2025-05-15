@@ -11,20 +11,20 @@
 // Forward declarations
 static void nimbleAdvertise(void);
 
-static void blePutINT16(uint8_t *data, uint16_t value)
+void blePutUINT16(uint8_t *data, uint16_t value)
 {
     *data++ = (value & 0xff);
     *data = ((value >> 8) & 0xff);
 }
 
-//static void blePutINT24(uint8_t *data, uint32_t value)
-//{
-//    *data++ = (value & 0xff);
-//    *data++ = ((value >> 8) & 0xff);
-//    *data = ((value >> 16) & 0xff);
-//}
+void blePutUINT24(uint8_t *data, uint32_t value)
+{
+    *data++ = (value & 0xff);
+    *data++ = ((value >> 8) & 0xff);
+    *data = ((value >> 16) & 0xff);
+}
 
-static void blePutINT32(uint8_t *data, uint32_t value)
+void blePutUINT32(uint8_t *data, uint32_t value)
 {
     *data++ = (value & 0xff);
     *data++ = ((value >> 8) & 0xff);
@@ -32,17 +32,36 @@ static void blePutINT32(uint8_t *data, uint32_t value)
     *data = ((value >> 24) & 0xff);
 }
 
-//static void blePutINT64(uint8_t *data, uint64_t value)
-//{
-//    *data++ = (value & 0xff);
-//    *data++ = ((value >> 8) & 0xff);
-//    *data++ = ((value >> 16) & 0xff);
-//    *data++ = ((value >> 24) & 0xff);
-//    *data++ = ((value >> 32) & 0xff);
-//    *data++ = ((value >> 40) & 0xff);
-//    *data++ = ((value >> 48) & 0xff);
-//    *data = ((value >> 56) & 0xff);
-//}
+void blePutUINT64(uint8_t *data, uint64_t value)
+{
+    *data++ = (value & 0xff);
+    *data++ = ((value >> 8) & 0xff);
+    *data++ = ((value >> 16) & 0xff);
+    *data++ = ((value >> 24) & 0xff);
+    *data++ = ((value >> 32) & 0xff);
+    *data++ = ((value >> 40) & 0xff);
+    *data++ = ((value >> 48) & 0xff);
+    *data = ((value >> 56) & 0xff);
+}
+
+uint16_t bleGetUINT16(const uint8_t *data)
+{
+    uint16_t value = ((uint16_t) data[1] << 8) | (uint16_t) data[0];
+    return value;
+}
+
+uint32_t bleGetUINT24(const uint8_t *data)
+{
+    uint32_t value = ((uint32_t) data[2] <<16) | ((uint32_t) data[1] << 8) | (uint32_t) data[0];
+    return value;
+}
+
+uint32_t bleGetUINT32(const uint8_t *data)
+{
+    uint32_t value = ((uint32_t) data[3] << 24) | ((uint32_t) data[2] << 16) | ((uint32_t) data[1] << 8) | (uint32_t) data[0];
+    return value;
+}
+
 
 // Device Serial Number
 static SerialNumber serialNumber;
@@ -155,32 +174,56 @@ static int setWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
     return 0;
 }
 
+#ifdef CONFIG_DCS_OPERATING_STATUS_FMT_BINARY
 static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
 {
     WiFiConfigInfo *wifiConfigInfo = &appConfigInfo.wifiConfigInfo;
     DevOperStatus devOperStatus = {0};
 
     uint32_t sysUpTime = pdTICKS_TO_MS(xTaskGetTickCount() - baseTicks) / 1000;
-    blePutINT32(devOperStatus.sysUpTime, sysUpTime);
-    blePutINT32(devOperStatus.wifiStaIpAddr, wifiConfigInfo->wifiIpAddr);
-    blePutINT32(devOperStatus.wifiApIpAddr, wifiConfigInfo->wifiGwAddr);
+    blePutUINT32(devOperStatus.sysUpTime, sysUpTime);
+    blePutUINT32(devOperStatus.wifiStaIpAddr, wifiConfigInfo->wifiIpAddr);
+    blePutUINT32(devOperStatus.wifiApIpAddr, wifiConfigInfo->wifiGwAddr);
     memcpy(devOperStatus.wifiStaMacAddr, wifiConfigInfo->wifiMac, 6);
     devOperStatus.wifiRssi = wifiConfigInfo->rssi;
     devOperStatus.wifiChan = wifiConfigInfo->priChan;
     memcpy(devOperStatus.blePerMacAddr, inbConnInfo.ourAddr.val, 6);
     memcpy(devOperStatus.bleCenMacAddr, inbConnInfo.peerAddr.val, 6);
-    blePutINT16(devOperStatus.freeHeapMem, (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024));
-    blePutINT16(devOperStatus.maxHeapMemBlk, (heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024));
+    blePutUINT16(devOperStatus.freeHeapMem, (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024));
+    blePutUINT16(devOperStatus.maxHeapMemBlk, (heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024));
 #ifdef CONFIG_FAT_FS
     uint64_t totalBytes, freeBytes;
     if (esp_vfs_fat_info(CONFIG_FAT_FS_MOUNT_POINT, &totalBytes, &freeBytes) == ESP_OK) {
         uint16_t freeFatFsSpace = freeBytes / 1024;
-        blePutINT16(devOperStatus.freeFatFsSpace, freeFatFsSpace);
+        blePutUINT16(devOperStatus.freeFatFsSpace, freeFatFsSpace);
     }
 #endif
 
     return (os_mbuf_append(ctxt->om, &devOperStatus, sizeof (devOperStatus)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
+#else
+static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
+{
+    WiFiConfigInfo *wifiConfigInfo = &appConfigInfo.wifiConfigInfo;
+    uint32_t sysUpTime = pdTICKS_TO_MS(xTaskGetTickCount() - baseTicks) / 1000;
+    char ipAddr[INET_ADDRSTRLEN];
+    static char fmtBuf[256];
+
+    snprintf(fmtBuf, sizeof (fmtBuf),
+            "upTime: %lu [s]\n"
+            "ipAddr: %s\n"
+            "rssi: %d [dBm]\n"
+            "freeMem: %u [kB]\n"
+            "maxBlk: %u [kB]\n",
+            sysUpTime,
+            inet_ntop(AF_INET, &wifiConfigInfo->wifiIpAddr, ipAddr, sizeof (ipAddr)),
+            wifiConfigInfo->rssi,
+            (unsigned) (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024),
+            (unsigned) (heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024));
+
+    return (os_mbuf_append(ctxt->om, fmtBuf, strlen(fmtBuf)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+#endif
 
 static CmdStatus cmdStatus = { .opCode = coNoOp, .status = csIdle };
 
@@ -245,13 +288,29 @@ static CmdStatusCode setLogDestCmd(struct os_mbuf *om)
 static int setUtcTimeCmd(struct os_mbuf *om)
 {
     struct timeval utcTime = {0};
+    uint32_t utcSecs;
+    int8_t utcOffset;
 
-    if ((om == NULL) || (om->om_len != 5)) {
+    if ((om == NULL) || (om->om_len != 6)) {
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
 
-    utcTime.tv_sec = (om->om_data[1] << 24) | (om->om_data[2] << 16) | (om->om_data[3] << 8) | om->om_data[4];
-    return (settimeofday(&utcTime, NULL) == 0) ? csSuccess : csFailed;
+    utcSecs = bleGetUINT32(&om->om_data[1]);
+    utcTime.tv_sec = utcSecs;
+    utcOffset = (int8_t) om->om_data[5];
+    if ((utcOffset < -12) || (utcOffset > 12)) {
+        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    }
+
+    mlog(trace, "utcTime=0x%08llX utcOffset=%d", utcTime.tv_sec, utcOffset);
+
+    if (settimeofday(&utcTime, NULL) != 0) {
+        return csFailed;
+    }
+    appConfigInfo.utcOffset = utcOffset;
+    nvramWrite(&appConfigInfo);
+
+    return csSuccess;
 }
 
 static int setUtcOffsetCmd(struct os_mbuf *om)
@@ -269,6 +328,7 @@ static int setUtcOffsetCmd(struct os_mbuf *om)
 
     appConfigInfo.utcOffset = utcOffset;
     nvramWrite(&appConfigInfo);
+
     mlog(trace, "utcOffset=%d", utcOffset);
 
     return 0;
@@ -519,6 +579,7 @@ static int procConnectEvent(const struct ble_gap_event *event)
         struct ble_gap_conn_desc connDesc = {0};
         ble_gap_conn_find(event->connect.conn_handle, &connDesc);
 
+        // Set up connection state
         inbConnInfo.connTime = time(NULL);
         inbConnInfo.connHandle = event->connect.conn_handle;
         inbConnInfo.connEstablished = true;
@@ -538,7 +599,15 @@ static int procDisconnectEvent(const struct ble_gap_event *event)
 {
     if (event->disconnect.conn.conn_handle == inbConnInfo.connHandle) {
         mlog(info, "Inbound BLE connection dropped: connHandle=%u reason=0x%03x", inbConnInfo.connHandle, event->disconnect.reason);
-        memset(&inbConnInfo, 0, sizeof (inbConnInfo));
+
+        // Clean up connection state
+        inbConnInfo.connTime = 0;
+        inbConnInfo.connHandle = 0;
+        inbConnInfo.connEstablished = false;
+        inbConnInfo.cmdReqIndicate = false;
+        memset(&inbConnInfo.peerAddr, 0, sizeof (inbConnInfo.peerAddr));
+
+        // Start advertising again
         nimbleAdvertise();
 
         // Let the user know...
@@ -564,6 +633,8 @@ static int procSubscribeEvent(const struct ble_gap_event *event)
 {
     uint16_t attrHandle = event->subscribe.attr_handle;
 
+    //mlog(trace, "connHandle=%u attrHandle=%u notify=%u indicate=%u", event->subscribe.conn_handle, attrHandle, event->subscribe.cur_notify, event->subscribe.cur_indicate);
+
     if (attrHandle == 8) {
         // When the iOS LightBlue mobile app connects, it
         // enables indications on the characteristic with
@@ -571,6 +642,8 @@ static int procSubscribeEvent(const struct ble_gap_event *event)
     } else if (attrHandle == inbConnInfo.cmdReqHandle) {
         inbConnInfo.cmdReqIndicate = event->subscribe.cur_indicate;
         mlog(info, "Command Request indications %sabled!", (inbConnInfo.cmdReqIndicate) ? "en" : "dis");
+    } else {
+        mlog(warning, "Unsupported attrHandle=%u : cmdReqHandle=%u", attrHandle, inbConnInfo.cmdReqHandle);
     }
 
     return 0;
@@ -727,12 +800,28 @@ static void nimbleOnReset(int reason)
 
 static void nimbleOnSync(void)
 {
-    mlog(trace, " ");
+    //mlog(trace, " ");
 
     // Ensure we have a public address
     if (ble_hs_util_ensure_addr(false) != 0) {
         mlog(fatal, "No BLE public address!");
     }
+
+#if 0
+    // Show the attribute handle of the characteristics
+    // which support NOTIFY/INDICATE.
+    {
+        for (int svc = 0; gattSvcs[svc].uuid != NULL; svc++) {
+            for (int chr = 0; gattSvcs[svc].characteristics[chr].uuid != NULL; chr++) {
+                if (gattSvcs[svc].characteristics[chr].flags & (BLE_GATT_CHR_F_NOTIFY | BLE_GATT_CHR_F_INDICATE)) {
+                    if (gattSvcs[svc].characteristics[chr].val_handle != NULL) {
+                        mlog(trace, "svc=%d chr=%d attrHandle=%u", svc, chr, *gattSvcs[svc].characteristics[chr].val_handle);
+                    }
+                }
+            }
+        }
+    }
+#endif
 
     // Start advertising our own services
     nimbleAdvertise();

@@ -37,7 +37,7 @@ typedef enum CmdOpCode {
     coStartOtaUpdate,
     coSetLogLevel,      // {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG}
     coSetLogDest,       // {UINT8: 0=Console, 1=File, 2=Both}
-    coSetUtcTime,       // {UINT32: # seconds since the Epoch}
+    coSetUtcTime,       // {UINT32: # seconds since the Epoch, INT8: # hours east or west from GMT}
     coSetUtcOffset,     // {INT8: # hours east or west from GMT}
     coSetWiFiState,     // {UINT8: 0=Disabled, 1=Enabled}
     coDumpMlogFile,
@@ -69,5 +69,14 @@ typedef struct CmdStatus {
 __BEGIN_DECLS
 
 extern int bleInit(void);
+
+extern void blePutUINT16(uint8_t *data, uint16_t value);
+extern void blePutUINT24(uint8_t *data, uint32_t value);
+extern void blePutUINT32(uint8_t *data, uint32_t value);
+extern void blePutUINT64(uint8_t *data, uint64_t value);
+extern uint16_t bleGetUINT16(const uint8_t *data);
+extern uint32_t bleGetUINT24(const uint8_t *data);
+extern uint32_t bleGetUINT32(const uint8_t *data);
+extern uint64_t bleGetUINT64(const uint8_t *data);
 
 __END_DECLS

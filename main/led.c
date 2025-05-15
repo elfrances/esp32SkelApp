@@ -63,6 +63,8 @@ static TaskHandle_t ledTaskHandle;
 static QueueHandle_t ledMsgQHandle;
 static LedMode ledMode = off;
 static LedColor ledColor = black;
+static LedMode prevLedMode = off;
+static LedColor prevLedColor = black;
 static uint8_t ledDimFactor = 2;
 static uint8_t R = 0x00;
 static uint8_t G = 0x00;
@@ -116,13 +118,23 @@ static void ledTask(void *parms)
         // Wait for a message or for the LED toggle
         // period to expire...
         if (xQueueReceive(ledMsgQHandle, &ledMsg, periodTbl[ledMode].msTicks) == pdTRUE) {
-            ledMode = ledMsg.mode;
-            if (ledMsg.color != ledColor) {
+            if (ledMsg.mode != off) {
+                // Push the current mode/color
+                prevLedMode = ledMode;
+                prevLedColor = ledColor;
+                ledMode = ledMsg.mode;
                 ledColor = ledMsg.color;
-                R = rgbTbl[ledColor].R >> ledDimFactor;
-                G = rgbTbl[ledColor].G >> ledDimFactor;
-                B = rgbTbl[ledColor].B >> ledDimFactor;
+            } else {
+                // Pop the previous mode/color
+                ledMode = prevLedMode;
+                ledColor = prevLedColor;
+                prevLedMode = off;
+                prevLedColor = black;
             }
+
+            R = rgbTbl[ledColor].R >> ledDimFactor;
+            G = rgbTbl[ledColor].G >> ledDimFactor;
+            B = rgbTbl[ledColor].B >> ledDimFactor;
         }
 
         ledBlink();

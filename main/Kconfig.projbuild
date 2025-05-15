@@ -205,7 +205,26 @@ menu "SkelApp Configuration"
         default 0xFE00
         help
             The 16-bit UUID to use for the custom Device Configuration Service.         
-        
+
+    choice DCS_OPERATING_STATUS_FORMAT
+        prompt "Operating Status data format"
+        depends on BLE_PERIPHERAL
+        default DCS_OPERATING_STATUS_FMT_BINARY
+        help
+            The format of the Operating Status data.
+
+        config DCS_OPERATING_STATUS_FMT_BINARY
+            bool "Binary Data"
+        config DCS_OPERATING_STATUS_FMT_STRING 
+            bool "UTF-8 String"
+    endchoice
+    
+    config DCS_OPERATING_STATUS_FORMAT
+    	int
+    	depends on BLE_PERIPHERAL
+        default 0 if DCS_OPERATING_STATUS_FMT_BINARY
+        default 1 if DCS_OPERATING_STATUS_FMT_STRING
+    
     config DEVICE_CONFIG_SERVICE_HELP
         bool "Device Config Service Help"
         depends on BLE_PERIPHERAL
