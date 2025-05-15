@@ -117,23 +117,31 @@ idf.py menuconfig
 7. Add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_WAKEUP_PERIOD. Of course you are free to replace this simple periodic work loop, for something more advanced, such as an event-driven work loop that can process different events posted by timers, interrupts, callback's, etc.
 
 ```
-// App initialization
-static int appInit(void)
+typedef struct AppInfo {
+    TaskHandle_t taskHandle;
+    // TBD
+} AppInfo;
+
+// Custom app initialization
+static int appCustInit(AppInfo *appInfo)
 {
     // TBD
     return 0;
 }
 
 // This is the app's main task. It runs an infinite work
-// loop, keeping a constant wake up interval.
+// loop, trying its best to keep a constant wake up interval.
 void appMainTask(void *parms)
 {
+    AppInfo appInfo = {0};
     const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
 
-    // Initialize whatever is needed before entering
-    // the infinite work loop.
-    if (appInit() != 0) {
-        mlog(fatal, "App initialization failed!");
+    appInfo.taskHandle = xTaskGetCurrentTaskHandle();
+
+    // Do any custom app initialization before
+    // entering the infinite work loop.
+    if (appCustInit(&appInfo) != 0) {
+        mlog(fatal, "Custom app initialization failed!");
     }
 
     while (true) {
@@ -144,7 +152,9 @@ void appMainTask(void *parms)
         startTicks = xTaskGetTickCount();
 
         // Custom app code goes here...
-        mlog(trace, "Hello world!");
+        {
+            mlog(info, "TICK!");
+        }
 
         // Figure out how much time we spent so far
         elapsedTicks = xTaskGetTickCount() - startTicks;
@@ -155,7 +165,7 @@ void appMainTask(void *parms)
             vTaskDelay(delayTicks);
         } else if (elapsedTicks > wakeupPeriodTicks) {
             // Oops! We exceeded the required wake up period!
-            mlog(warning, "Wakeup period exceeded by %lu ms !!!", pdTICKS_TO_MS(elapsedTicks - wakeupPeriodTicks));
+            mlog(warning, "%u ms wakeup period exceeded by %lu ms !!!", CONFIG_MAIN_TASK_WAKEUP_PERIOD, pdTICKS_TO_MS(elapsedTicks - wakeupPeriodTicks));
         }
     }
 
@@ -235,7 +245,7 @@ This characteristic is used to direct the ESP32 device to execute a command.  Th
 | 0x03   | Start OTA Firmware Update | none|
 | 0x04   | Set MLOG Level | {UINT8: 0=NONE, 1=INFO, 2=TRACE, 3=DEBUG} |
 | 0x05   | Set MLOG Destination | {UINT8: 0=Console, 1=File, 2=Both} |
-| 0x06   | Set UTC Time | {UINT32: # seconds since the Epoch } |
+| 0x06   | Set UTC Time | {UINT32: # seconds since the Epoch, INT8: # hours east or west from GMT } |
 | 0x07   | Set UTC Offset | {INT8: # hours east or west from GMT } |
 | 0x08   | Set WiFi State | {UINT8: 0=Disabled, 1=Enabled} |
 | 0x09   | Dump MLOG File | none |
@@ -243,10 +253,10 @@ This characteristic is used to direct the ESP32 device to execute a command.  Th
 
 For example:
 
-1. To set the UTC Time to May 2, 2025, 13:10 the command request bytes would be: 06 67 F8 D9 B8.
-2. To set the UTC Offset to Pacific Standard Time (UTC-8) the command request bytes would be: 07 F8.
+1. To set the UTC Time to May 2, 2025, 13:10 and the timezone to Pacific Daylight Time (UTC-7) the command request bytes would be: 06 67 F8 D9 B8 F9.
+2. To set just the UTC Offset to Central Daylight Time (UTC-5) the command request bytes would be: 07 FB.
 
-Reading this characteristic returns the command execution status, which consists of a single UINT8 value:
+Reading this characteristic returns the command execution status, which consists of two UINT8 values: the first one indicates the OpCode of the last command request issued, and the second one indicates the status of the operation. The possible values are:
 
 | Status Code | Description |
 | ----------- | ----------- |
