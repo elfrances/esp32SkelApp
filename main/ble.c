@@ -336,6 +336,7 @@ static int setUtcOffsetCmd(struct os_mbuf *om)
 
 static int setWiFiStateCmd(struct os_mbuf *om)
 {
+#ifdef CONFIG_WIFI_STATION
     bool enabled = false;
 
     if ((om == NULL) || (om->om_len != 2)) {
@@ -345,6 +346,9 @@ static int setWiFiStateCmd(struct os_mbuf *om)
     enabled = !!om->om_data[1];
 
     return (wifiEnable(enabled) == 0) ? csSuccess : csFailed;
+#else
+    return csInvOpCode;
+#endif
 }
 
 static CmdStatusCode dumpMlogFileCmd(struct os_mbuf *om)
