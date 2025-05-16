@@ -70,33 +70,33 @@ For the purpose of this example, let's assume that:
 
 1. Download the code from GitHub and unzip it:
 
-```
+```bash
 wget https://github.com/elfrances/esp32SkelApp/archive/refs/heads/main.zip
 unzip main.zip
 ```
 
 2. Rename the top level directory from "esp32SkelApp-main" to "myNewApp":
 
-```
+```bash
 mv esp32SkelApp-main myNewApp
 cd myNewApp
 ```
 
 3. Fix the project name in the top-level CMakeLists.txt file:
 
-```
+```bash
 sed -i s'/esp32SkelApp/myNewApp/' CMakeLists.txt
 ```
 
 4. Use the sample sdkconfig.esp32c3.basic file to create the project's sdkconfig file:
 
-```
+```bash
 cp sdkconfig.esp32c3.basic sdkconfig
 ```
 
 5. Build and flash the app:
 
-```
+```bash
 idf.py build
 idf.py flash -p /dev/ttyUSB0
 ```
@@ -110,13 +110,13 @@ idf.py flash -p /dev/ttyUSB0
 >
 > Similarly, if you don't need FAT FS support, you can eliminate the "storage" partition, and give the space back to the factory/ota partitions.
 
-```
+```bash
 idf.py menuconfig
 ```
  
 7. Add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_WAKEUP_PERIOD. Of course you are free to replace this simple periodic work loop, for something more advanced, such as an event-driven work loop that can process different events posted by timers, interrupts, callback's, etc.
 
-```
+```c
 typedef struct AppInfo {
     TaskHandle_t taskHandle;
     // TBD
@@ -176,7 +176,7 @@ void appMainTask(void *parms)
 > [!NOTE]
 > If your app needs to store any data in non-volatile storage, you can extend **SkelApp**'s AppConfigInfo structure, defined in myNewApp/main/app.h.  AppConfigInfo is stored in the NVM partition of the flash memory, and is loaded early on during app start up.
 
-```
+```c
 // App configuration info
 typedef struct AppConfigInfo {
     WiFiConfigInfo wifiConfigInfo;
@@ -275,7 +275,7 @@ Properties: READ
 
 This optional characteristic can be used to get help about the commands supported by the Command Request characteristic. When read, it returns the following UTF-8 string:
 
-```
+```text
 01: Restart
 02: Clear Config
 03: OTA Update
