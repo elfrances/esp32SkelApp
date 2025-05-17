@@ -167,6 +167,7 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
 
         if (logLevel == fatal) {
             ledSet(on, red);
+            vTaskDelay(pdMS_TO_TICKS(1000));
             assert(false);
         }
 

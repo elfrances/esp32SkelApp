@@ -79,7 +79,7 @@ static int fatFsInit(void)
         .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
     };
     esp_err_t err;
-    uint64_t totalBytes, freeBytes;
+    uint64_t totalBytes, freeBytes, pctUsed;
     char fileName[272];
 
     if ((err = esp_vfs_fat_spiflash_mount_rw_wl(CONFIG_FAT_FS_MOUNT_POINT, "storage", &fatFsMountConfig, &wlHandle)) != ESP_OK) {
@@ -91,16 +91,14 @@ static int fatFsInit(void)
         mlog(error, "Failed to get FATFS info: %s", esp_err_to_name(err));
         return -1;
     }
+    pctUsed = ((totalBytes - freeBytes) * 100 * 100) / totalBytes;
 
-    mlog(trace, "Total: %" PRIu64 " bytes, Free: %" PRIu64 " bytes", totalBytes, freeBytes);
-
-    if (freeBytes == 0) {
-        mlog(warning, "No space available in FATFS!");
-    }
+    mlog(info, "FATFS: Size=%u Free=%u Used=%u.%02u%%", (unsigned) totalBytes, (unsigned) freeBytes, (unsigned) (pctUsed / 100), (unsigned) (pctUsed % 100));
 
     if (CONFIG_FAT_FS_LIST_FILES) {
         DIR *dir;
         struct dirent *dirEnt;
+        size_t totalBytes = 0;
 
         // List the contents of the FATFS
         if ((dir = opendir(CONFIG_FAT_FS_MOUNT_POINT)) == NULL) {
@@ -117,6 +115,7 @@ static int fatFsInit(void)
                 struct stat fileStat;
                 struct tm brkDwnTime;
                 char tsBuf[20]; // YYYY-MM-DD HH:MM:SS
+                size_t fileSize = fileStat.st_size;
 
                 snprintf(fileName, sizeof (fileName), "%s/%s", CONFIG_FAT_FS_MOUNT_POINT, dName);
                 if (stat(fileName, &fileStat) != 0) {
@@ -124,10 +123,11 @@ static int fatFsInit(void)
                     return -1;
                 }
                 strftime(tsBuf, sizeof (tsBuf), "%Y-%m-%d %H:%M:%S", gmtime_r(&fileStat.st_mtim.tv_sec, &brkDwnTime));  // %H means 24-hour time
-                printf("     %12s | %8ld | %19s \n", dName, fileStat.st_size, tsBuf);
+                printf("     %12s | %8zu | %19s \n", dName, fileSize, tsBuf);
+                totalBytes += fileSize;
             }
         }
-        printf("\n");
+        printf("\nTotal bytes: %zu\n\n", totalBytes);
 
         closedir(dir);
     }

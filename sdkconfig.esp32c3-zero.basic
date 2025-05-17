@@ -403,7 +403,7 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# SkelApp Configuration
+# SKELAPP Configuration
 #
 CONFIG_ENV_GPIO_RANGE_MIN=0
 CONFIG_ENV_GPIO_RANGE_MAX=19
@@ -460,7 +460,7 @@ CONFIG_APP_MAIN_TASK_WAKEUP_METHOD_TASK_DELAY=y
 CONFIG_MAIN_TASK_WAKEUP_METHOD=0
 CONFIG_MAIN_TASK_WAKEUP_PERIOD=1000
 # CONFIG_MAIN_TASK_TIME_WORK_LOOP is not set
-# end of SkelApp Configuration
+# end of SKELAPP Configuration
 
 #
 # Compiler options
