@@ -441,7 +441,7 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
     return 0;
 }
 
-#ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
+#ifdef CONFIG_DCS_SERVICE_HELP
 static const char *cmdHelp = \
     "01: Restart\n"
     "02: Clear Config\n"
@@ -473,7 +473,7 @@ static int deviceConfigCb(uint16_t conn_handle, uint16_t attr_handle, struct ble
         } else if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
             return runCmd(ctxt);
         }
-#ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
+#ifdef CONFIG_DCS_SERVICE_HELP
     } else if (uuid == GATT_DCS_COMMAND_HELP_UUID) {
         return (os_mbuf_append(ctxt->om, cmdHelp, strlen(cmdHelp)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 #endif
@@ -549,7 +549,7 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
                 .val_handle = &inbConnInfo.cmdReqHandle,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_INDICATE,
             },
-#ifdef CONFIG_DEVICE_CONFIG_SERVICE_HELP
+#ifdef CONFIG_DCS_SERVICE_HELP
             {
                 // Command Help
                 .uuid = BLE_UUID16_DECLARE(GATT_DCS_COMMAND_HELP_UUID),

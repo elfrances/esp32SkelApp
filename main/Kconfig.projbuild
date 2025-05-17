@@ -225,7 +225,7 @@ menu "SkelApp Configuration"
         default 0 if DCS_OPERATING_STATUS_FMT_BINARY
         default 1 if DCS_OPERATING_STATUS_FMT_STRING
     
-    config DEVICE_CONFIG_SERVICE_HELP
+    config DCS_HELP
         bool "Device Config Service Help"
         depends on BLE_PERIPHERAL
         default y
@@ -275,6 +275,60 @@ menu "SkelApp Configuration"
         help
             Specifies the FQDN of the NTP server to use to set the
             current date and time.
+            
+    menuconfig WEB_SERVER
+        	bool "Web Server"
+        	depends on WIFI_STATION
+        	default n
+        	help
+    	        Add support for HTTP Web Server.
+
+    config WEB_SERVER_TCP_PORT
+        int "Web Server TCP Port"
+        depends on WEB_SERVER
+        range 1024 65536
+        default 8080
+        help
+            The TCP port for the HTTP Web Server.
+        
+     config WEB_SERVER_TASK_PRIO
+        int "Web Server Task Priority"
+        depends on WEB_SERVER
+        range 0 24
+        default 10
+        help
+            The priority of the Web Server task. The valid range is: 
+            0 to (configMAX_PRIORITIES-1).
+
+    config WEB_SERVER_TASK_STACK
+        int "Web Server Task Stack Size"
+        depends on WEB_SERVER
+        range 4096 8192
+        default 4096
+        help
+            The stack size of the Web Server task.
+            
+    choice WEB_SERVER_TASK_CPU
+        prompt "OTA Update Task CPU Affinity"
+        depends on WEB_SERVER
+        default WEB_SERVER_TASK_CPU_NO_AFFINITY
+        help
+            The CPU core of the Web Server task.
+
+        config WEB_SERVER_TASK_CPU_NO_AFFINITY
+            bool "No affinity"
+        config WEB_SERVER_TASK_CPU_CORE0
+            bool "CPU0"
+        config WEB_SERVER_TASK_CPU_CORE1 
+            bool "CPU1"
+    endchoice
+                
+    config WEB_SERVER_TASK_CPU
+        hex
+        depends on WEB_SERVER
+        default FREERTOS_NO_AFFINITY if WEB_SERVER_TASK_CPU_NO_AFFINITY
+        default 0x0 if WEB_SERVER_TASK_CPU_CORE0
+        default 0x1 if WEB_SERVER_TASK_CPU_CORE1
     
     menuconfig OTA_UPDATE
         bool "OTA Update"

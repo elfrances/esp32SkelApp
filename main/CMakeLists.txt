@@ -1,5 +1,6 @@
 set(srcs app.c
          ble.c
+         https.c
          led.c
          main.c
          mlog.c

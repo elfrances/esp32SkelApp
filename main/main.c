@@ -8,6 +8,7 @@
 #include "ble.h"
 #include "esp32.h"
 #include "fgc.h"
+#include "https.h"
 #include "led.h"
 #include "mlog.h"
 #include "nvram.h"
@@ -21,6 +22,9 @@ _Static_assert((CONFIG_RGB_LED_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "RGB_LE
 #endif
 #ifdef CONFIG_BLE_PERIPHERAL
 _Static_assert((CONFIG_BLE_HOST_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "BLE_HOST_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
+#endif
+#ifdef CONFIG_WEB_SERVER
+_Static_assert((CONFIG_WEB_SERVER_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "WEB_SERVER_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
 #endif
 #ifdef CONFIG_OTA_UPDATE
 _Static_assert((CONFIG_OTA_TASK_PRIO <= (configMAX_PRIORITIES - 1)), "OTA_TASK_PRIO is inconsistent with configMAX_PRIORITIES !");
@@ -266,6 +270,13 @@ void app_main(void)
     // Init the FAT FS
     if (fatFsInit() != 0) {
         mlog(fatal, "Failed to init FATFS!");
+    }
+#endif
+
+#ifdef CONFIG_WEB_SERVER
+    // Init the HTTP Web Server
+    if (httpsInit() != 0) {
+        mlog(fatal, "Failed to init HTTP Server!");
     }
 #endif
 
