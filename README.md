@@ -36,6 +36,10 @@ Adds support for BLE peripheral functionality, so that an external BLE central c
 
 Adds support for WiFi station, so that the ESP32 device can connect to a WiFi network to get Internet connectivity.
 
+### Web Server
+
+Adds support for a basic HTTP web server.
+
 ### OTA Update
 
 Adds support for doing OTA firmware updates over WiFi.
