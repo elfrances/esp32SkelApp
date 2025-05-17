@@ -7,11 +7,13 @@
 #include "mlog.h"
 
 #ifdef CONFIG_WEB_SERVER
+// This string is the content of the web page served
+// when the client requests the URL "http://<addr>:<port>/help"
 static char helpText[] = "HELP\n";
 
 static esp_err_t getData(httpd_req_t *req)
 {
-    char*  buf;
+    char *buf;
     size_t bufLen;
     bufLen = httpd_req_get_hdr_value_len(req, "Host") + 1;
     if (bufLen > 1) {
@@ -21,9 +23,8 @@ static esp_err_t getData(httpd_req_t *req)
         }
         free(buf);
     }
-    const char* resp_str = (const char*) req->user_ctx;
-    httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
-    return ESP_OK;
+    const char *respText = (const char *) req->user_ctx;
+    return httpd_resp_send(req, respText, HTTPD_RESP_USE_STRLEN);
 }
 
 static const httpd_uri_t helpURI = {
