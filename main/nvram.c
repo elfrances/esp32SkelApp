@@ -30,9 +30,9 @@ int nvramClose(void)
     return 0;
 }
 
-int nvramRead(AppConfigInfo *configInfo)
+int nvramRead(AppPersData *configInfo)
 {
-    size_t configInfoBlobSize = sizeof (AppConfigInfo);
+    size_t configInfoBlobSize = sizeof (AppPersData);
     size_t blobLen;
     esp_err_t rc;
 
@@ -94,9 +94,9 @@ int nvramRead(AppConfigInfo *configInfo)
     return 0;
 }
 
-int nvramWrite(const AppConfigInfo *configInfo)
+int nvramWrite(const AppPersData *configInfo)
 {
-    size_t configInfoBlobSize = sizeof (AppConfigInfo);
+    size_t configInfoBlobSize = sizeof (AppPersData);
     esp_err_t rc;
 
     //mlog(info, "Saving configuration on NVRAM...");
@@ -124,7 +124,7 @@ int nvramWrite(const AppConfigInfo *configInfo)
 
 int nvramClear(void)
 {
-    AppConfigInfo configInfo = {0}; // this voids the MAGIC_NUMBER
+    AppPersData configInfo = {0}; // this voids the MAGIC_NUMBER
     esp_err_t rc;
 
     //mlog(info, "Clearing confInfo record...");

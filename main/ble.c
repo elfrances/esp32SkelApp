@@ -5,8 +5,13 @@
 #include "mlog.h"
 #include "nvram.h"
 #include "ota.h"
+#include "wifi.h"
 
 #ifdef CONFIG_BLE_PERIPHERAL
+
+// We need to make this pointer file-global because the
+// NimBLE API doesn't support passing it as an argument.
+static AppData *appData;
 
 // Forward declarations
 static void nimbleAdvertise(void);
@@ -102,7 +107,7 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
                 serialNumber.digits[0], serialNumber.digits[1], serialNumber.digits[2], serialNumber.digits[3]);
         string = strBuf;
     } else if (uuid == GATT_DIS_FIRMWARE_REVISION_UUID) {
-        snprintf(strBuf, sizeof (strBuf), "%s (%s)", appBuildInfo.appDesc->version, appBuildInfo.buildType);
+        snprintf(strBuf, sizeof (strBuf), "%s (%s)", appData->appDesc->version, appData->buildType);
         string = strBuf;
     } else if (uuid == GATT_DIS_HARDWARE_REVISION_UUID) {
         string = CONFIG_IDF_TARGET;
@@ -120,17 +125,17 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
 // then the data read or written would be string:
 // "ABCDE###12345".
 
+static const size_t wifiCredMaxLen = sizeof (appData->persData.wifiSsid) + 3 + sizeof (appData->persData.wifiPasswd);
+
 static int getWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
 {
-    const WiFiConfigInfo *wifiConfigInfo = &appConfigInfo.wifiConfigInfo;
-    char data[sizeof (wifiConfigInfo->wifiSsid) + 3 + sizeof (wifiConfigInfo->wifiPasswd)];
-    uint16_t len = snprintf(data, sizeof (data), "%s###%s", wifiConfigInfo->wifiSsid, wifiConfigInfo->wifiPasswd);
+    char data[wifiCredMaxLen];
+    uint16_t len = snprintf(data, sizeof (data), "%s###%s", appData->persData.wifiSsid, appData->persData.wifiPasswd);
     return (os_mbuf_append(ctxt->om, data, len) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
 static int setWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
 {
-    WiFiConfigInfo *wifiConfigInfo = &appConfigInfo.wifiConfigInfo;
     struct os_mbuf *om = ctxt->om;
     char *data;
     uint16_t len;
@@ -142,7 +147,7 @@ static int setWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
 
     data = (char *) om->om_data;
     len = om->om_len;
-    if (len > (sizeof (wifiConfigInfo->wifiSsid) + sizeof (wifiConfigInfo->wifiPasswd) + 3)) {
+    if (len > wifiCredMaxLen) {
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
 
@@ -157,19 +162,19 @@ static int setWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
     pass[len] = '\0';   // null-terminate the Password string
 
     // Validate the individual string lengths
-    if (strlen(ssid) >= sizeof (wifiConfigInfo->wifiSsid)) {
+    if (strlen(ssid) >= sizeof (appData->persData.wifiSsid)) {
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
-    if (strlen(pass) >= sizeof (wifiConfigInfo->wifiPasswd)) {
+    if (strlen(pass) >= sizeof (appData->persData.wifiPasswd)) {
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
 
-    strncpy(wifiConfigInfo->wifiSsid, ssid, sizeof (wifiConfigInfo->wifiSsid));
-    strncpy(wifiConfigInfo->wifiPasswd, pass, sizeof (wifiConfigInfo->wifiPasswd));
-    wifiConfigInfo->wifiPasswd[sizeof (wifiConfigInfo->wifiPasswd) - 1] = '\0';
+    strncpy(appData->persData.wifiSsid, ssid, sizeof (appData->persData.wifiSsid));
+    strncpy(appData->persData.wifiPasswd, pass, sizeof (appData->persData.wifiPasswd));
+    appData->persData.wifiPasswd[sizeof (appData->persData.wifiPasswd) - 1] = '\0';
 
-    nvramWrite(&appConfigInfo);
-    mlog(trace, "wifiSsid=%s wifiPasswd=%s", wifiConfigInfo->wifiSsid, wifiConfigInfo->wifiPasswd);
+    nvramWrite(&appData->persData);
+    mlog(trace, "wifiSsid=%s wifiPasswd=%s", appData->persData.wifiSsid, appData->persData.wifiPasswd);
 
     return 0;
 }
@@ -177,16 +182,15 @@ static int setWiFiCredentials(struct ble_gatt_access_ctxt *ctxt)
 #ifdef CONFIG_DCS_OPERATING_STATUS_FMT_BINARY
 static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
 {
-    WiFiConfigInfo *wifiConfigInfo = &appConfigInfo.wifiConfigInfo;
     DevOperStatus devOperStatus = {0};
 
-    uint32_t sysUpTime = pdTICKS_TO_MS(xTaskGetTickCount() - baseTicks) / 1000;
+    uint32_t sysUpTime = pdTICKS_TO_MS(xTaskGetTickCount() - appData->baseTicks) / 1000;
     blePutUINT32(devOperStatus.sysUpTime, sysUpTime);
-    blePutUINT32(devOperStatus.wifiStaIpAddr, wifiConfigInfo->wifiIpAddr);
-    blePutUINT32(devOperStatus.wifiApIpAddr, wifiConfigInfo->wifiGwAddr);
-    memcpy(devOperStatus.wifiStaMacAddr, wifiConfigInfo->wifiMac, 6);
-    devOperStatus.wifiRssi = wifiConfigInfo->rssi;
-    devOperStatus.wifiChan = wifiConfigInfo->priChan;
+    blePutUINT32(devOperStatus.wifiStaIpAddr, appData->wifiIpAddr);
+    blePutUINT32(devOperStatus.wifiApIpAddr, appData->wifiGwAddr);
+    memcpy(devOperStatus.wifiStaMacAddr, appData->wifiMac, 6);
+    devOperStatus.wifiRssi = appData->wifiRssi;
+    devOperStatus.wifiChan = appData->wifiPriChan;
     memcpy(devOperStatus.blePerMacAddr, inbConnInfo.ourAddr.val, 6);
     memcpy(devOperStatus.bleCenMacAddr, inbConnInfo.peerAddr.val, 6);
     blePutUINT16(devOperStatus.freeHeapMem, (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024));
@@ -216,8 +220,8 @@ static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
             "freeMem: %u [kB]\n"
             "maxBlk: %u [kB]\n",
             sysUpTime,
-            inet_ntop(AF_INET, &wifiConfigInfo->wifiIpAddr, ipAddr, sizeof (ipAddr)),
-            wifiConfigInfo->rssi,
+            inet_ntop(AF_INET, &appData->wifiIpAddr, ipAddr, sizeof (ipAddr)),
+            appData->wifiRssi,
             (unsigned) (heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024),
             (unsigned) (heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024));
 
@@ -307,8 +311,8 @@ static int setUtcTimeCmd(struct os_mbuf *om)
     if (settimeofday(&utcTime, NULL) != 0) {
         return csFailed;
     }
-    appConfigInfo.utcOffset = utcOffset;
-    nvramWrite(&appConfigInfo);
+    appData->persData.utcOffset = utcOffset;
+    nvramWrite(&appData->persData);
 
     return csSuccess;
 }
@@ -326,8 +330,8 @@ static int setUtcOffsetCmd(struct os_mbuf *om)
         return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
     }
 
-    appConfigInfo.utcOffset = utcOffset;
-    nvramWrite(&appConfigInfo);
+    appData->persData.utcOffset = utcOffset;
+    nvramWrite(&appData->persData);
 
     mlog(trace, "utcOffset=%d", utcOffset);
 
@@ -345,7 +349,7 @@ static int setWiFiStateCmd(struct os_mbuf *om)
 
     enabled = !!om->om_data[1];
 
-    return (wifiEnable(enabled) == 0) ? csSuccess : csFailed;
+    return (wifiEnable(appData, enabled) == 0) ? csSuccess : csFailed;
 #else
     return csInvOpCode;
 #endif
@@ -833,6 +837,9 @@ static void nimbleOnSync(void)
 
 static void nimbleHostTask(void *param)
 {
+    // Stash the appData pointer
+    appData = param;
+
     //mlog(trace, "Task %s started: core=%u prio=%u", __func__, esp_cpu_get_core_id(), uxTaskPriorityGet(NULL));
 
     // This function will return only when nimble_port_stop()
@@ -842,7 +849,7 @@ static void nimbleHostTask(void *param)
     mlog(fatal, "SPONG! nimble_port_run() returned!");
 }
 
-int bleInit(void)
+int bleInit(AppData *appData)
 {
     int rc;
     char devName[32];
@@ -876,7 +883,7 @@ int bleInit(void)
 
     // Start the NimBLE Host task
     if ((rc = xTaskCreatePinnedToCore(nimbleHostTask, "bleHostTask", CONFIG_BLE_HOST_TASK_STACK,
-                                      NULL, CONFIG_BLE_HOST_TASK_PRIO, NULL, CONFIG_BLE_HOST_TASK_CPU)) != pdPASS) {
+                                      (void *) appData, CONFIG_BLE_HOST_TASK_PRIO, NULL, CONFIG_BLE_HOST_TASK_CPU)) != pdPASS) {
         mlog(fatal, "xTaskCreatePinnedToCore: rc=%d", rc);
     }
 

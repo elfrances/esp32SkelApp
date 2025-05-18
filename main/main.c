@@ -39,7 +39,7 @@ _Static_assert((CONFIG_MAIN_TASK_WAKEUP_PERIOD % (1000 / CONFIG_FREERTOS_HZ) == 
 
 #if CONFIG_WIFI_NTP
 // Configure SNTP and get the current date and time
-static int sntpInit(void)
+static int sntpInit(AppData *appData)
 {
     struct timeval now;
 
@@ -57,7 +57,7 @@ static int sntpInit(void)
             // generate relative timestamps.
             struct timeval newNow;
             gettimeofday(&newNow, NULL);
-            tvSub(&baseTime, &newNow, &now);
+            tvSub(&appData->baseTime, &newNow, &now);
             mlog(info, "Date and time set!");
             return 0;
         }
@@ -147,15 +147,18 @@ static int fatFsInit(void)
 }
 #endif
 
+// App data record
+static AppData appData;
+
 // This function is called by the ESP-IDF "main" task during
 // system start up.
 void app_main(void)
 {
-    appBuildInfo.appDesc = esp_app_get_description();
+    appData.appDesc = esp_app_get_description();
 #if (CONFIG_COMPILER_OPTIMIZATION_DEFAULT)
-    appBuildInfo.buildType = "Debug";
+    appData.buildType = "Debug";
 #else
-    appBuildInfo.buildType = "Release";
+    appData.buildType = "Release";
 #endif
     esp_err_t err;
 
@@ -172,15 +175,15 @@ void app_main(void)
 #endif
 
     printf("Firmware %s (%s) built on %s at %s using ESP-IDF %s\n",
-            appBuildInfo.appDesc->version, appBuildInfo.buildType, appBuildInfo.appDesc->date, appBuildInfo.appDesc->time, appBuildInfo.appDesc->idf_ver);
+            appData.appDesc->version, appData.buildType, appData.appDesc->date, appData.appDesc->time, appData.appDesc->idf_ver);
     printf("System Info: CPU=%s CLK=%uMHz, FreeMem=%uKB MaxBlock=%uKB\n",
             CONFIG_IDF_TARGET, CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
             heap_caps_get_free_size(MALLOC_CAP_DEFAULT) / 1024,
             heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT) / 1024);
 
     // Set the base time and ticks
-    gettimeofday(&baseTime, NULL);
-    baseTicks = xTaskGetTickCount();
+    gettimeofday(&appData.baseTime, NULL);
+    appData.baseTicks = xTaskGetTickCount();
 
 #ifdef CONFIG_MSG_LOG
     // Initialize the message logging API. Please note:
@@ -191,7 +194,7 @@ void app_main(void)
     //
     // 2 - At this point we can only log to the console,
     // as the FAT FS is not initialized yet.
-    if (msgLogInit(CONFIG_MSG_LOG_LEVEL, console) != 0) {
+    if (msgLogInit(&appData, CONFIG_MSG_LOG_LEVEL, console) != 0) {
         printf("SPONG! Failed to init msgLog API!\n");
         return;
     }
@@ -227,12 +230,12 @@ void app_main(void)
     }
 
     // Read the app's config info from NVRAM
-    if (nvramRead(&appConfigInfo) != 0) {
+    if (nvramRead(&appData.persData) != 0) {
         mlog(fatal, "Can't read app's config info!");
     }
 
 #ifdef CONFIG_BLE_PERIPHERAL
-    if (bleInit() != 0) {
+    if (bleInit(&appData) != 0) {
         mlog(fatal, "bleInit!");
     }
 #endif
@@ -240,28 +243,28 @@ void app_main(void)
 #ifdef CONFIG_WIFI_STATION
     // If we have hardwired WiFi credentials, use them...
     if ((strlen(CONFIG_WIFI_SSID) != 0) && (strlen(CONFIG_WIFI_PASSWD) != 0)) {
-        strcpy(appConfigInfo.wifiConfigInfo.wifiSsid, CONFIG_WIFI_SSID);
-        strcpy(appConfigInfo.wifiConfigInfo.wifiPasswd, CONFIG_WIFI_PASSWD);
+        strcpy(appData.persData.wifiSsid, CONFIG_WIFI_SSID);
+        strcpy(appData.persData.wifiPasswd, CONFIG_WIFI_PASSWD);
     }
 
-    if (wifiInit(&appConfigInfo.wifiConfigInfo) != 0) {
+    if (wifiInit(&appData) != 0) {
         mlog(fatal, "wifiInit!");
     }
 
-    if (wifiConnect() != 0) {
+    if (wifiConnect(&appData) != 0) {
         mlog(fatal, "wifiInit!");
     }
 
 #if CONFIG_WIFI_NTP
     // Now that we are connected to the network, set
     // the current date and time.
-    if (sntpInit() != 0) {
+    if (sntpInit(&appData) != 0) {
         mlog(warning, "Failed to set date and time!");
     }
 #endif
 
     // Save the WiFi credentials
-    if (nvramWrite(&appConfigInfo) != 0) {
+    if (nvramWrite(&appData.persData) != 0) {
         mlog(fatal, "Can't save app's config info!");
     }
 #endif  // CONFIG_WIFI_STATION
@@ -282,11 +285,11 @@ void app_main(void)
 
 #ifdef CONFIG_APP_MAIN_TASK
     // Spawn the appMain task that will do all the work
-    if (xTaskCreatePinnedToCore(appMainTask, "appMain", CONFIG_MAIN_TASK_STACK, NULL, CONFIG_MAIN_TASK_PRIO, NULL, CONFIG_MAIN_TASK_CPU) != pdPASS) {
+    if (xTaskCreatePinnedToCore(appMainTask, "appMain", CONFIG_MAIN_TASK_STACK, NULL, CONFIG_MAIN_TASK_PRIO, (void *) &appData, CONFIG_MAIN_TASK_CPU) != pdPASS) {
         mlog(fatal, "Can't spawn appMain task!");
     }
 #else
-    // Add your app code here...
-#endif
+    // If not using the appMainTask, then add your app code here...
 
+#endif
 }

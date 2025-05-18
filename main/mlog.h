@@ -6,6 +6,8 @@
 
 #include "sdkconfig.h"
 
+#include "app.h"
+
 typedef enum LogDest {
     console = 0,
     file = 1,
@@ -35,7 +37,7 @@ __BEGIN_DECLS
 
 extern void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, const char *fmt, ...)  __attribute__ ((__format__ (__printf__, 5, 6)));
 
-extern int msgLogInit(LogLevel defLogLevel, LogDest defLogDest);
+extern int msgLogInit(AppData *appData, LogLevel defLogLevel, LogDest defLogDest);
 extern LogDest msgLogSetDest(LogDest logDest);
 extern LogLevel msgLogSetLevel(LogLevel logLevel);
 extern LogLevel msgLogGetLevel(void);

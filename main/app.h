@@ -1,38 +1,42 @@
 #pragma once
 
 #include <sys/cdefs.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "esp32.h"
-#include "wifi.h"
 
-// App configuration info
-typedef struct AppConfigInfo {
-    WiFiConfigInfo wifiConfigInfo;
-    int8_t utcOffset;
+// App's persistent data
+typedef struct AppPersData {
+    char wifiSsid[64];      // SSID string
+    char wifiPasswd[64];    // Password string
+    int8_t utcOffset;       // UTC offset (in hours)
 
-    // Custom app config goes here
+    // Custom app persistent data goes below
 
-} AppConfigInfo;
+} AppPersData;
 
-// App's configuration info record
-extern AppConfigInfo appConfigInfo;
-
-// App build info
-typedef struct AppBuildInfo {
+// App's data
+typedef struct AppData {
+    AppPersData persData;   // saved to (restored from) NVM
     const char *buildType;
     const esp_app_desc_t *appDesc;
-} AppBuildInfo;
+    struct timeval baseTime;
+    TickType_t baseTicks;
+#ifdef CONFIG_WIFI_STATION
+    uint8_t wifiMac[6];     // WiFi MAC address
+    int8_t wifiRssi;        // WiFi RSSI value [in dBm]
+    uint8_t wifiPriChan;    // WiFi primary channel
+    uint32_t wifiIpAddr;    // DHCP assigned IP address
+    uint32_t wifiGwAddr;    // WiFi router IP address
+#endif
 
-// App's build info record
-extern AppBuildInfo appBuildInfo;
+    // Custom app data goes below
+
+} AppData;
 
 // Path for the mlog.txt file
 extern const char *mlogFilePath;
-
-// Base (reference) time and ticks
-extern struct timeval baseTime;
-extern TickType_t baseTicks;
 
 typedef struct SerialNumber {
     uint8_t digits[4];

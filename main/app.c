@@ -3,21 +3,12 @@
 #include "led.h"
 #include "mlog.h"
 #include "nvram.h"
-
-// App's configuration info record
-AppConfigInfo appConfigInfo;
-
-// App's build info record
-AppBuildInfo appBuildInfo;
+#include "wifi.h"
 
 #ifdef CONFIG_FAT_FS
 // Path for the MLOG.TXT file
 const char *mlogFilePath = CONFIG_FAT_FS_MOUNT_POINT "/MLOG.TXT";
 #endif
-
-// Base (reference) time and ticks
-struct timeval baseTime;
-TickType_t baseTicks;
 
 void getSerialNumber(SerialNumber *sn)
 {
@@ -141,6 +132,7 @@ static int appCustInit(AppInfo *appInfo)
 #if CONFIG_APP_MAIN_TASK_WAKEUP_METHOD_TASK_DELAY
 void appMainTask(void *parms)
 {
+    AppData *appData = parms;
     AppInfo appInfo = {0};
     const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
 

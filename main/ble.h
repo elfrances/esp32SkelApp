@@ -2,6 +2,8 @@
 
 #include <sys/cdefs.h>
 
+#include "app.h"
+
 // The following definitions are the external API to be
 // used by apps that want to connect to SkelApp over BLE.
 
@@ -68,7 +70,7 @@ typedef struct CmdStatus {
 
 __BEGIN_DECLS
 
-extern int bleInit(void);
+extern int bleInit(AppData *appData);
 
 extern void blePutUINT16(uint8_t *data, uint16_t value);
 extern void blePutUINT24(uint8_t *data, uint32_t value);

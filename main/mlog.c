@@ -31,6 +31,7 @@ static const char *logDestName[] = {
     [both] = "BOTH",
 };
 
+static AppData *appData;
 static LogDest msgLogDest = console;
 static LogLevel msgLogLevel = trace;
 static SemaphoreHandle_t mutexHandle;
@@ -48,7 +49,7 @@ static const char *fmtTimestamp(TsBuf *tsBuf)
     size_t bufLen = sizeof (TsBuf);
 
     gettimeofday(&now, NULL);
-    tvSub(&deltaT, &now, &baseTime);
+    tvSub(&deltaT, &now, &appData->baseTime);
     ss = deltaT.tv_sec;
     dd = ss / 86400;
     ss -= dd * 86400;
@@ -65,7 +66,7 @@ static const char *fmtTimestamp(TsBuf *tsBuf)
 static const char *fmtTimestamp(TsBuf *tsBuf)
 {
     TickType_t now = xTaskGetTickCount();
-    unsigned ticks = now - baseTicks;
+    unsigned ticks = now - appData->baseTicks;
     unsigned dd, hh, mm, ss, ms;
     size_t bufLen = sizeof (TsBuf);
 
@@ -90,7 +91,7 @@ static const char *fmtTimestamp(TsBuf *tsBuf)
     int n;
 
     gettimeofday(&now, NULL);
-    now.tv_sec += appConfigInfo.utcOffset * 3600;   // adjust based on UTC offset
+    now.tv_sec += appData->persData.utcOffset * 3600;   // adjust based on UTC offset
     n = strftime(tsBuf->buf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
 #if CONFIG_MSG_LOG_TS_TOD_USEC
     snprintf((tsBuf->buf + n), (bufLen - n), ".%06u", (unsigned) now.tv_usec);
@@ -175,8 +176,9 @@ void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int errorNum, 
     }
 }
 
-int msgLogInit(LogLevel defLogLevel, LogDest defLogDest)
+int msgLogInit(AppData *appDataArg, LogLevel defLogLevel, LogDest defLogDest)
 {
+    appData = appDataArg;
     msgLogLevel = defLogLevel;
     msgLogDest = defLogDest;
 
@@ -231,7 +233,7 @@ LogLevel msgLogGetLevel(void)
     return msgLogLevel;
 }
 #else
-int msgLogInit(LogLevel defLogLevel, LogDest defLogDest)
+int msgLogInit(AppData *appData, LogLevel defLogLevel, LogDest defLogDest)
 {
     return 0;
 }

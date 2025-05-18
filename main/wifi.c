@@ -6,7 +6,6 @@
 
 #ifdef CONFIG_WIFI_STATION
 
-static WiFiConfigInfo *confInfo = NULL;
 static TaskHandle_t callingTaskHandle = NULL;
 
 typedef enum WifiConnState {
@@ -33,10 +32,10 @@ static wifi_config_t wpsApCredentials[MAX_WPS_AP_CRED];
 static int numApCred = 0;
 #endif
 
-static void wifiClearCredentials(void)
+static void wifiClearCredentials(AppData *appData)
 {
-    memset(confInfo->wifiSsid, 0, sizeof (confInfo->wifiSsid));
-    memset(confInfo->wifiPasswd, 0, sizeof (confInfo->wifiPasswd));
+    memset(appData->persData.wifiSsid, 0, sizeof (appData->persData.wifiSsid));
+    memset(appData->persData.wifiPasswd, 0, sizeof (appData->persData.wifiPasswd));
 }
 
 // Format a LAN MAC address
@@ -76,16 +75,18 @@ const char *fmtRssi(int8_t rssi)
 // NOTE: this handler runs in the context of the "sys_evt" task
 static void ipEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, void *evtData)
 {
+    AppData *appData = arg;
+
     if (evtId == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *gotIp = evtData;
-        confInfo->wifiIpAddr = gotIp->ip_info.ip.addr;
-        confInfo->wifiGwAddr = gotIp->ip_info.gw.addr;
+        appData->wifiIpAddr = gotIp->ip_info.ip.addr;
+        appData->wifiGwAddr = gotIp->ip_info.gw.addr;
         char ipBuf[INET_ADDRSTRLEN];
         char gwBuf[INET_ADDRSTRLEN];
 
-        inet_ntop(AF_INET, &confInfo->wifiIpAddr, ipBuf, sizeof (ipBuf));
-        inet_ntop(AF_INET, &confInfo->wifiGwAddr, gwBuf, sizeof (gwBuf));
-        mlog(info, "Connected to WiFi AP: ipAddr=%s gwAddr=%s mac=%s rssi=%s chan=%u", ipBuf, gwBuf, fmtLanMac(confInfo->wifiMac), fmtRssi(confInfo->rssi), confInfo->priChan);
+        inet_ntop(AF_INET, &appData->wifiIpAddr, ipBuf, sizeof (ipBuf));
+        inet_ntop(AF_INET, &appData->wifiGwAddr, gwBuf, sizeof (gwBuf));
+        mlog(info, "Connected to WiFi AP: ipAddr=%s gwAddr=%s mac=%s rssi=%s chan=%u", ipBuf, gwBuf, fmtLanMac(appData->wifiMac), fmtRssi(appData->wifiRssi), appData->wifiPriChan);
 
         // Set the LED solid blue to indicate we are
         // connected to the network.
@@ -106,6 +107,7 @@ static void ipEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, voi
 // NOTE: this handler runs in the context of the "sys_evt" task
 static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, void *evtData)
 {
+    AppData *appData = arg;
     static int connRetryCnt = 0;
     esp_err_t rc;
 
@@ -113,22 +115,22 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
         //mlog(trace, "WIFI_EVENT_STA_START: wifiSsid=%s wifiPasswd=%s connRetryCnt=%d", confInfo->wifiSsid, confInfo->wifiPasswd, connRetryCnt);
 
         // Do we have valid credentials?
-        if ((confInfo->wifiSsid[0] != '\0') && (confInfo->wifiPasswd[0] != '\0')) {
+        if ((appData->persData.wifiSsid[0] != '\0') && (appData->persData.wifiPasswd[0] != '\0')) {
             wifi_config_t wifiConfig = {0};
 
             if (connRetryCnt == 0) {
-                int passwdLen = strlen(confInfo->wifiPasswd);
+                int passwdLen = strlen(appData->persData.wifiPasswd);
                 char hiddenPasswd[passwdLen + 1];
                 for (int i = 0; i < (passwdLen - 1); i++) {
                     hiddenPasswd[i] = '*';
                 }
                 hiddenPasswd[passwdLen - 1] = '\0';
-                mlog(info, "Connecting using saved WiFi config: SSID=\"%s\" PASS=\"%s\" ...", confInfo->wifiSsid, hiddenPasswd);
+                mlog(info, "Connecting using saved WiFi config: SSID=\"%s\" PASS=\"%s\" ...", appData->persData.wifiSsid, hiddenPasswd);
             }
 
             // Attempt to connect with the saved WiFi credentials
-            memcpy(wifiConfig.sta.ssid, confInfo->wifiSsid, sizeof (wifiConfig.sta.ssid));
-            memcpy(wifiConfig.sta.password, confInfo->wifiPasswd, sizeof (wifiConfig.sta.password));
+            memcpy(wifiConfig.sta.ssid, appData->persData.wifiSsid, sizeof (wifiConfig.sta.ssid));
+            memcpy(wifiConfig.sta.password, appData->persData.wifiPasswd, sizeof (wifiConfig.sta.password));
             esp_wifi_set_config(WIFI_IF_STA, &wifiConfig);
             if ((rc = esp_wifi_connect()) != 0) {
                 mlog(error, "esp_wifi_connect: rc=0x%04x connState=%d", rc, wifiConnState);
@@ -164,10 +166,10 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
         // Get the connection info
         esp_wifi_sta_get_rssi(&rssi);
         esp_wifi_get_channel(&priChan, &secChan);
-        esp_wifi_get_mac(ESP_IF_WIFI_STA, confInfo->wifiMac);
-        confInfo->rssi = rssi;
-        confInfo->priChan = priChan;
-        //mlog(trace, "Connected to WiFi AP: rssi=%s, priChan=%u, mac=%s", fmtRssi(confInfo->rssi), confInfo->priChan, fmtLanMac(confInfo->wifiMac));
+        esp_wifi_get_mac(ESP_IF_WIFI_STA, appData->wifiMac);
+        appData->wifiRssi = rssi;
+        appData->wifiPriChan = priChan;
+        //mlog(trace, "Connected to WiFi AP: rssi=%s, priChan=%u, mac=%s", fmtRssi(appData->wifiRssi), appData->wifiPriChan, fmtLanMac(appData->wifiMac));
         wifiConnState = wifiConnected;
         connRetryCnt = 0;
     } else if (evtId == WIFI_EVENT_STA_DISCONNECTED) {
@@ -176,17 +178,17 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
         bool retry = true;
 
         //mlog(trace, "WIFI_EVENT_STA_DISCONNECTED: reason=%u", reason);
-        if ((confInfo->wifiSsid[0] != '\0') && (confInfo->wifiPasswd[0] != '\0')) {
+        if ((appData->persData.wifiSsid[0] != '\0') && (appData->persData.wifiPasswd[0] != '\0')) {
             if (connRetryCnt++ >= 3) {
                 // The saved WiFi credentials don't seem to work anymore,
                 // likely because the AP's SSID/Password has changed or
                 // the ESP32 device was moved to a different WiFi network.
                 mlog(warning, "Saved WiFi credentials are invalid !");
-                wifiClearCredentials();
+                wifiClearCredentials(appData);
                 connRetryCnt = 0;
             } else if (reason == WIFI_REASON_NO_AP_FOUND) {
                 // The saved SSID is not available
-                mlog(warning, "Saved SSID \"%s\" not available: connRetryCnt=%u", confInfo->wifiSsid, connRetryCnt);
+                mlog(warning, "Saved SSID \"%s\" not available: connRetryCnt=%u", appData->persData.wifiSsid, connRetryCnt);
             } else if ((reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT) ||
                        (reason == WIFI_REASON_AUTH_FAIL)) {
                 // The saved password didn't work... Notice that after
@@ -194,7 +196,7 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
                 // the WiFi AP (not clear why) so we allow for a few
                 // retries before giving up and switching to WPS.
                 if (disconn->reason != WIFI_REASON_AUTH_FAIL) {
-                    mlog(warning, "Saved PASS \"%s\" didn't work: connRetryCnt=%u", confInfo->wifiPasswd, connRetryCnt);
+                    mlog(warning, "Saved PASS \"%s\" didn't work: connRetryCnt=%u", appData->persData.wifiPasswd, connRetryCnt);
                 }
 #ifdef CONFIG_WPS
             } else if (reason == WIFI_REASON_802_1X_AUTH_FAILED) {
@@ -272,7 +274,7 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
         mlog(info, "Got WPS credentials: SSID=\"%s\" PASS=\"%s\"", (char *) staConfig.sta.ssid, (char *) staConfig.sta.password);
 
         // Save the WiFi credentials we got via WPS
-        if (wifiSetCredentials((char *) staConfig.sta.ssid, (char *) staConfig.sta.password) != 0) {
+        if (wifiSetCredentials(appData, (char *) staConfig.sta.ssid, (char *) staConfig.sta.password) != 0) {
             mlog(error, "Failed to save WPS credentials !");
         }
 
@@ -299,28 +301,28 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
     }
 }
 
-int wifiSetCredentials(const char *ssid, const char *passwd)
+int wifiSetCredentials(AppData *appData, const char *ssid, const char *passwd)
 {
     size_t ssidLen, passLen;
 
     // Check the length of the SSID and PASS strings
-    if ((ssidLen = strlen(ssid)) > sizeof (confInfo->wifiSsid)) {
+    if ((ssidLen = strlen(ssid)) > sizeof (appData->persData.wifiSsid)) {
         mlog(error, "SSID=\"%s\" is too long!", ssid);
         return -1;
     }
-    if ((passLen = strlen(passwd)) > sizeof (confInfo->wifiPasswd)) {
+    if ((passLen = strlen(passwd)) > sizeof (appData->persData.wifiPasswd)) {
         mlog(error, "Password=\"%s\" is too long!", passwd);
         return -1;
     }
 
-    wifiClearCredentials();
-    memcpy(confInfo->wifiSsid, ssid, ssidLen);
-    memcpy(confInfo->wifiPasswd, passwd, passLen);
+    wifiClearCredentials(appData);
+    memcpy(appData->persData.wifiSsid, ssid, ssidLen);
+    memcpy(appData->persData.wifiPasswd, passwd, passLen);
 
     return 0;
 }
 
-int wifiInit(WiFiConfigInfo *wifiConfigInfo)
+int wifiInit(AppData *appData)
 {
     if (esp_netif_create_default_wifi_sta() == NULL)
         return -1;
@@ -331,28 +333,26 @@ int wifiInit(WiFiConfigInfo *wifiConfigInfo)
         return -1;
 
     // Install WiFi event handler
-    if (esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifiEvtHandler, NULL) != ESP_OK)
+    if (esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifiEvtHandler, appData) != ESP_OK)
         return -1;
 
     // Install IP config event handler
-    if (esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, ipEvtHandler, NULL) != ESP_OK)
+    if (esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, ipEvtHandler, appData) != ESP_OK)
         return -1;
 
     // Set WiFi mode to "station"
     if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK)
         return -1;
 
-    confInfo = wifiConfigInfo;
-
     // To override the WiFi credentials stored
     // in NVRAM, uncomment the following lines.
-    //strcpy(confInfo->wifiSsid, "ElkAndMoose");
-    //strcpy(confInfo->wifiPasswd, "sunvalley1228");
+    //strcpy(appData->persData.wifiSsid, "HomeSweetHome");
+    //strcpy(appData->persData.wifiPasswd, "T0PSeaKret!");
 
     return 0;
 }
 
-int wifiConnect(void)
+int wifiConnect(AppData *appData)
 {
     esp_err_t rc = 0;
 
@@ -360,8 +360,8 @@ int wifiConnect(void)
         mlog(info, "Connecting to WiFi AP ...");
 
         // Clear the current IP addresses
-        confInfo->wifiIpAddr = 0;
-        confInfo->wifiGwAddr = 0;
+        appData->wifiIpAddr = 0;
+        appData->wifiGwAddr = 0;
 
         // Make the LED blue and blink 4x per second to
         // indicate that we are connecting to the WiFi
@@ -375,8 +375,8 @@ int wifiConnect(void)
         }
 
         // Block until the connection attempt finishes
-        callingTaskHandle = xTaskGetHandle(pcTaskGetName(NULL));
-        vTaskSuspend(callingTaskHandle);
+        callingTaskHandle = xTaskGetCurrentTaskHandle();
+        vTaskSuspend(NULL);
     } else {
         mlog(warning, "Connection request ignored: connState=%d", wifiConnState);
     }
@@ -402,12 +402,12 @@ int wifiDisconnect(void)
     return 0;
 }
 
-int wifiEnable(bool enable)
+int wifiEnable(AppData *appData, bool enable)
 {
     mlog(info, "%sabling WiFi ...", (enable) ? "En" : "Dis");
 
     if (enable && (wifiConnState != wifiConnected)) {
-        return wifiConnect();
+        return wifiConnect(appData);
     } else if (!enable) {
         wifiConnState = wifiDisconnecting;
         esp_wifi_stop();
