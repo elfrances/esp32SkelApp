@@ -148,19 +148,20 @@ static int fatFsInit(void)
 #endif
 
 // App data record
-static AppData appData;
+static AppData appData = {0};
 
 // This function is called by the ESP-IDF "main" task during
 // system start up.
 void app_main(void)
 {
+    esp_err_t err;
+
     appData.appDesc = esp_app_get_description();
 #if (CONFIG_COMPILER_OPTIMIZATION_DEFAULT)
     appData.buildType = "Debug";
 #else
     appData.buildType = "Release";
 #endif
-    esp_err_t err;
 
     // Reset the terminal's foreground color highlighting
     printf("%s\n", RESET_FGC);
@@ -184,6 +185,9 @@ void app_main(void)
     // Set the base time and ticks
     gettimeofday(&appData.baseTime, NULL);
     appData.baseTicks = xTaskGetTickCount();
+
+    // Get the device serial number
+    getSerialNumber(&appData);
 
 #ifdef CONFIG_MSG_LOG
     // Initialize the message logging API. Please note:
@@ -285,7 +289,7 @@ void app_main(void)
 
 #ifdef CONFIG_APP_MAIN_TASK
     // Spawn the appMain task that will do all the work
-    if (xTaskCreatePinnedToCore(appMainTask, "appMain", CONFIG_MAIN_TASK_STACK, NULL, CONFIG_MAIN_TASK_PRIO, (void *) &appData, CONFIG_MAIN_TASK_CPU) != pdPASS) {
+    if (xTaskCreatePinnedToCore(appMainTask, "appMain", CONFIG_MAIN_TASK_STACK, &appData, CONFIG_MAIN_TASK_PRIO, NULL, CONFIG_MAIN_TASK_CPU) != pdPASS) {
         mlog(fatal, "Can't spawn appMain task!");
     }
 #else

@@ -68,9 +68,6 @@ uint32_t bleGetUINT32(const uint8_t *data)
 }
 
 
-// Device Serial Number
-static SerialNumber serialNumber;
-
 // Inbound Connection Information
 typedef struct InbConnInfo {
     time_t connTime;
@@ -104,7 +101,7 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
         string = CONFIG_MODEL_NUMBER;
     } else if (uuid == GATT_DIS_SERIAL_NUMBER_UUID) {
         snprintf(strBuf, sizeof (strBuf), "%02X%02X%02X%02X",
-                serialNumber.digits[0], serialNumber.digits[1], serialNumber.digits[2], serialNumber.digits[3]);
+                appData->serialNumber[0], appData->serialNumber[1], appData->serialNumber[2], appData->serialNumber[3]);
         string = strBuf;
     } else if (uuid == GATT_DIS_FIRMWARE_REVISION_UUID) {
         snprintf(strBuf, sizeof (strBuf), "%s (%s)", appData->appDesc->version, appData->buildType);
@@ -859,9 +856,6 @@ int bleInit(AppData *appData)
         mlog(fatal, "nimble_port_init: rc=%d", rc);
     }
 
-    // Get our serial number
-    getSerialNumber(&serialNumber);
-
     // Initialize NimBLE host configuration
     ble_hs_cfg.sync_cb = nimbleOnSync;
     ble_hs_cfg.reset_cb = nimbleOnReset;
@@ -869,7 +863,7 @@ int bleInit(AppData *appData)
     // Initialize NimBLE peripheral/server configuration
     ble_svc_gap_init();
     ble_svc_gatt_init();
-    snprintf(devName, sizeof (devName), "%s-%02X%02X", CONFIG_BLE_ADV_NAME, serialNumber.digits[2], serialNumber.digits[3]);
+    snprintf(devName, sizeof (devName), "%s-%02X%02X", CONFIG_BLE_ADV_NAME, appData->serialNumber[2], appData->serialNumber[3]);
     ble_svc_gap_device_name_set(devName);
     ble_svc_gap_device_appearance_set(BLE_SVC_GAP_APPEARANCE_GEN_UNKNOWN);
 

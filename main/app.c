@@ -10,11 +10,11 @@
 const char *mlogFilePath = CONFIG_FAT_FS_MOUNT_POINT "/MLOG.TXT";
 #endif
 
-void getSerialNumber(SerialNumber *sn)
+void getSerialNumber(AppData *appData)
 {
     uint8_t macAddr[6];
     esp_read_mac(macAddr, ESP_MAC_BASE);
-    memcpy(sn->digits, (macAddr+2), 4);
+    memcpy(appData->serialNumber, (macAddr+2), sizeof (appData->serialNumber));
 }
 
 int restartDevice(void)
@@ -105,23 +105,8 @@ int deleteMlogFile(bool warn)
 }
 
 #ifdef CONFIG_APP_MAIN_TASK
-// App Info
-typedef struct AppInfo {
-    TaskHandle_t taskHandle;
-#if CONFIG_APP_MAIN_TASK_WAKEUP_METHOD_ESP_TIMER
-    esp_timer_handle_t wakeupTimerHandle;
-#endif
-#ifdef CONFIG_MAIN_TASK_TIME_WORK_LOOP
-    uint64_t workLoopCount;
-    uint64_t sumWorkLoopTime;
-    uint64_t minWorkLoopTime;
-    uint64_t maxWorkLoopTime;
-    uint64_t avgWorkLoopTime;
-#endif
-} AppInfo;
-
 // Custom app initialization
-static int appCustInit(AppInfo *appInfo)
+static int appCustInit(AppData *appData)
 {
     // TBD
     return 0;
@@ -133,14 +118,13 @@ static int appCustInit(AppInfo *appInfo)
 void appMainTask(void *parms)
 {
     AppData *appData = parms;
-    AppInfo appInfo = {0};
     const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
 
-    appInfo.taskHandle = xTaskGetCurrentTaskHandle();
+    appData->appMainTaskHandle = xTaskGetCurrentTaskHandle();
 
     // Do any custom app initialization before
     // entering the infinite work loop.
-    if (appCustInit(&appInfo) != 0) {
+    if (appCustInit(appData) != 0) {
         mlog(fatal, "Custom app initialization failed!");
     }
 
@@ -176,33 +160,33 @@ void appMainTask(void *parms)
 // in the context of the ESP Timer task.
 static void wakeupTimerCb(void *arg)
 {
-    const TaskHandle_t appMainHandle = *(TaskHandle_t *) arg;
-    xTaskNotifyGive(appMainHandle);
+    AppData *appData = arg;
+    xTaskNotifyGive(appData->appMainTaskHandle);
 }
 
 void appMainTask(void *parms)
 {
-    AppInfo appInfo = {0};
+    AppData *appData = parms;
     const uint64_t wakeupPeriod = CONFIG_MAIN_TASK_WAKEUP_PERIOD * 1000;    // in usec
 
-    appInfo.taskHandle = xTaskGetCurrentTaskHandle();
+    appData->appMainTaskHandle = xTaskGetCurrentTaskHandle();
 
     // Create the ESP Timer used to post the
     // wake up events.
     {
         esp_timer_create_args_t wakeupTimerArgs = {0};
         wakeupTimerArgs.callback = wakeupTimerCb;
-        wakeupTimerArgs.arg = &appInfo.taskHandle;
+        wakeupTimerArgs.arg = appData;
         wakeupTimerArgs.dispatch_method = ESP_TIMER_TASK;
         wakeupTimerArgs.name = "wakeupTmr";
-        if (esp_timer_create(&wakeupTimerArgs, &appInfo.wakeupTimerHandle) != ESP_OK) {
+        if (esp_timer_create(&wakeupTimerArgs, &appData->wakeupTimerHandle) != ESP_OK) {
             mlog(fatal, "Failed to create wakeupTimer!");
         }
     }
 
     // Do any custom app initialization before
     // entering the infinite work loop.
-    if (appCustInit(&appInfo) != 0) {
+    if (appCustInit(appData) != 0) {
         mlog(fatal, "Custom app initialization failed!");
     }
 
@@ -224,7 +208,7 @@ void appMainTask(void *parms)
         if (elapsedTime < wakeupPeriod) {
             // Set up the wake up alarm ...
             uint64_t sleepTime = wakeupPeriod - elapsedTime;
-            if (esp_timer_start_once(appInfo.wakeupTimerHandle, sleepTime) != ESP_OK) {
+            if (esp_timer_start_once(appData->wakeupTimerHandle, sleepTime) != ESP_OK) {
                 mlog(fatal, "Failed to start wakeupTimer!");
             }
 
@@ -241,15 +225,15 @@ void appMainTask(void *parms)
         {
             uint64_t wakeupTime = esp_timer_get_time();
             uint64_t workLoopTime = wakeupTime - startTime;
-            if (workLoopTime < appInfo.minWorkLoopTime) {
-                appInfo.minWorkLoopTime = workLoopTime;
-            } else if (workLoopTime > appInfo.maxWorkLoopTime) {
-                appInfo.maxWorkLoopTime = workLoopTime;
+            if (workLoopTime < appData->minWorkLoopTime) {
+                appData->minWorkLoopTime = workLoopTime;
+            } else if (workLoopTime > appData->maxWorkLoopTime) {
+                appData->maxWorkLoopTime = workLoopTime;
             }
-            appInfo.sumWorkLoopTime += workLoopTime;
-            appInfo.avgWorkLoopTime = appInfo.sumWorkLoopTime / ++appInfo.workLoopCount;
-            if ((appInfo.workLoopCount % (1000 / CONFIG_MAIN_TASK_WAKEUP_PERIOD)) == 0) {
-                mlog(trace, "Work Loop Time Stats: min=%llu avg=%llu max=%llu", appInfo.minWorkLoopTime, appInfo.avgWorkLoopTime, appInfo.maxWorkLoopTime);
+            appData->sumWorkLoopTime += workLoopTime;
+            appData->avgWorkLoopTime = appData->sumWorkLoopTime / ++appData->workLoopCount;
+            if ((appData->workLoopCount % (1000 / CONFIG_MAIN_TASK_WAKEUP_PERIOD)) == 0) {
+                mlog(trace, "Work Loop Time Stats: min=%llu avg=%llu max=%llu", appData->minWorkLoopTime, appData->avgWorkLoopTime, appData->maxWorkLoopTime);
             }
         }
 #endif

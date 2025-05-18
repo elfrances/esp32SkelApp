@@ -23,12 +23,28 @@ typedef struct AppData {
     const esp_app_desc_t *appDesc;
     struct timeval baseTime;
     TickType_t baseTicks;
+    uint8_t serialNumber[4];
+
 #ifdef CONFIG_WIFI_STATION
     uint8_t wifiMac[6];     // WiFi MAC address
     int8_t wifiRssi;        // WiFi RSSI value [in dBm]
     uint8_t wifiPriChan;    // WiFi primary channel
     uint32_t wifiIpAddr;    // DHCP assigned IP address
     uint32_t wifiGwAddr;    // WiFi router IP address
+#endif
+
+#ifdef CONFIG_APP_MAIN_TASK
+    TaskHandle_t appMainTaskHandle;
+#if CONFIG_APP_MAIN_TASK_WAKEUP_METHOD_ESP_TIMER
+    esp_timer_handle_t wakeupTimerHandle;
+#endif
+#ifdef CONFIG_MAIN_TASK_TIME_WORK_LOOP
+    uint64_t workLoopCount;
+    uint64_t sumWorkLoopTime;
+    uint64_t minWorkLoopTime;
+    uint64_t maxWorkLoopTime;
+    uint64_t avgWorkLoopTime;
+#endif
 #endif
 
     // Custom app data goes below
@@ -38,14 +54,10 @@ typedef struct AppData {
 // Path for the mlog.txt file
 extern const char *mlogFilePath;
 
-typedef struct SerialNumber {
-    uint8_t digits[4];
-} SerialNumber;
-
 __BEGIN_DECLS
 
 extern void appMainTask(void *parms);
-extern void getSerialNumber(SerialNumber *sn);
+extern void getSerialNumber(AppData *appData);
 extern int restartDevice(void);
 extern int clearConfig(void);
 extern int dumpMlogFile(bool warn);
