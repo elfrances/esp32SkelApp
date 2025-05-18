@@ -85,13 +85,16 @@ static const char *fmtTimestamp(TsBuf *tsBuf)
 #else
 static const char *fmtTimestamp(TsBuf *tsBuf)
 {
+    const time_t secs2025Jan01 = 1735689600; // seconds since the Epoch by 2025-Jan-01 00:00:00
     struct timeval now;
     struct tm brkDwnTime;
     size_t bufLen = sizeof (TsBuf);
     int n;
 
     gettimeofday(&now, NULL);
-    now.tv_sec += appData->persData.utcOffset * 3600;   // adjust based on UTC offset
+    if (now.tv_sec >= secs2025Jan01) {
+        now.tv_sec += appData->persData.utcOffset * 3600;   // adjust time based on UTC offset
+    }
     n = strftime(tsBuf->buf, bufLen, "%Y-%m-%d %H:%M:%S", gmtime_r(&now.tv_sec, &brkDwnTime));    // %H means 24-hour time
 #if CONFIG_MSG_LOG_TS_TOD_USEC
     snprintf((tsBuf->buf + n), (bufLen - n), ".%06u", (unsigned) now.tv_usec);

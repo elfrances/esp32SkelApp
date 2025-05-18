@@ -92,10 +92,10 @@ menu "SKELAPP Configuration"
             bool "Up-time HH:MM:SS.msec"
         config MSG_LOG_TS_TOD_USEC 
             bool "Date and Time (usec)"
-            depends on WIFI_NTP
+            depends on WIFI_NTP || BLE_PERIPHERAL
         config MSG_LOG_TS_TOD_MSEC 
             bool "Date and Time (msec)"
-            depends on WIFI_NTP
+            depends on WIFI_NTP || BLE_PERIPHERAL
     endchoice
         
     config MSG_LOG_TIMESTAMP

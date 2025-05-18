@@ -226,7 +226,7 @@ static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
 }
 #endif
 
-static CmdStatus cmdStatus = { .opCode = coNoOp, .status = csIdle };
+static CmdStatus cmdStatus = { .opCode = coUnknown, .status = csUnknown };
 
 static int getCmdStatus(struct ble_gatt_access_ctxt *ctxt)
 {
@@ -248,7 +248,7 @@ static CmdStatusCode startOtaUpdateCmd(struct os_mbuf *om)
 #ifdef CONFIG_OTA_UPDATE
     return (otaUpdateStart() == 0) ? csSuccess : csFailed;
 #else
-    return csInvOpCode;
+    return csUnsOpCode;
 #endif
 }
 
@@ -256,8 +256,8 @@ static CmdStatusCode setLogLevelCmd(struct os_mbuf *om)
 {
     LogLevel logLevel;
 
-    if ((om == NULL) || (om->om_len != 2)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    if (om->om_len != 2) {
+        return csInvParam;
     }
 
     logLevel = om->om_data[1];
@@ -273,8 +273,8 @@ static CmdStatusCode setLogDestCmd(struct os_mbuf *om)
 {
     LogDest logDest;
 
-    if ((om == NULL) || (om->om_len != 2)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    if (om->om_len != 2) {
+        return csInvParam;
     }
 
     logDest = om->om_data[1];
@@ -292,24 +292,24 @@ static int setUtcTimeCmd(struct os_mbuf *om)
     uint32_t utcSecs;
     int8_t utcOffset;
 
-    if ((om == NULL) || (om->om_len != 6)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    if (om->om_len != 6) {
+        return csInvParam;
     }
 
     utcSecs = bleGetUINT32(&om->om_data[1]);
     utcTime.tv_sec = utcSecs;
     utcOffset = (int8_t) om->om_data[5];
     if ((utcOffset < -12) || (utcOffset > 12)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+        return csInvParam;
     }
-
-    mlog(trace, "utcTime=0x%08llX utcOffset=%d", utcTime.tv_sec, utcOffset);
 
     if (settimeofday(&utcTime, NULL) != 0) {
         return csFailed;
     }
     appData->persData.utcOffset = utcOffset;
     nvramWrite(&appData->persData);
+
+    mlog(info, "Date and time set!");
 
     return csSuccess;
 }
@@ -318,13 +318,13 @@ static int setUtcOffsetCmd(struct os_mbuf *om)
 {
     int8_t utcOffset;
 
-    if ((om == NULL) || (om->om_len != 2)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    if (om->om_len != 2) {
+        return csInvParam;
     }
 
     utcOffset = (int8_t) om->om_data[1];
     if ((utcOffset < -12) || (utcOffset > 12)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+        return csInvParam;
     }
 
     appData->persData.utcOffset = utcOffset;
@@ -340,8 +340,8 @@ static int setWiFiStateCmd(struct os_mbuf *om)
 #ifdef CONFIG_WIFI_STATION
     bool enabled = false;
 
-    if ((om == NULL) || (om->om_len != 2)) {
-        return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+    if (om->om_len != 2) {
+        return csInvParam;
     }
 
     enabled = !!om->om_data[1];
@@ -380,7 +380,7 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
     cmdStatus.status = csInProg;
 
     switch (cmdStatus.opCode) {
-    case coNoOp:
+    case coUnknown:
         csc = csSuccess;
         break;
 
@@ -426,6 +426,7 @@ static int runCmd(struct ble_gatt_access_ctxt *ctxt)
 
     default:
         csc = csInvOpCode;
+        mlog(warning, "Unsupported opCode 0x%02X", cmdStatus.opCode);
         break;
     }
 

@@ -113,16 +113,19 @@ static int fatFsInit(void)
             if (dirEnt->d_type == DT_REG) {
                 const char *dName = dirEnt->d_name;
                 struct stat fileStat;
+                size_t fileSize;
+                time_t lastModTime;
                 struct tm brkDwnTime;
                 char tsBuf[20]; // YYYY-MM-DD HH:MM:SS
-                size_t fileSize = fileStat.st_size;
 
                 snprintf(fileName, sizeof (fileName), "%s/%s", CONFIG_FAT_FS_MOUNT_POINT, dName);
                 if (stat(fileName, &fileStat) != 0) {
                     mlog(errNo, "Failed to stat file %s", fileName);
                     return -1;
                 }
-                strftime(tsBuf, sizeof (tsBuf), "%Y-%m-%d %H:%M:%S", gmtime_r(&fileStat.st_mtim.tv_sec, &brkDwnTime));  // %H means 24-hour time
+                fileSize = fileStat.st_size;
+                lastModTime = fileStat.st_mtim.tv_sec;
+                strftime(tsBuf, sizeof (tsBuf), "%Y-%m-%d %H:%M:%S", gmtime_r(&lastModTime, &brkDwnTime));  // %H means 24-hour time
                 printf("     %12s | %8zu | %19s \n", dName, fileSize, tsBuf);
                 totalBytes += fileSize;
             }

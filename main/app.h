@@ -25,13 +25,11 @@ typedef struct AppData {
     TickType_t baseTicks;
     uint8_t serialNumber[4];
 
-#ifdef CONFIG_WIFI_STATION
     uint8_t wifiMac[6];     // WiFi MAC address
     int8_t wifiRssi;        // WiFi RSSI value [in dBm]
     uint8_t wifiPriChan;    // WiFi primary channel
     uint32_t wifiIpAddr;    // DHCP assigned IP address
     uint32_t wifiGwAddr;    // WiFi router IP address
-#endif
 
 #ifdef CONFIG_APP_MAIN_TASK
     TaskHandle_t appMainTaskHandle;
