@@ -1,7 +1,7 @@
 # Introduction
 
 **esp32SkelApp** (or **SkelApp** for short) is an ESP-IDF skeletal app for the ESP32 SoC that can be used as a template when creating a new app that uses WiFi and/or BLE.
-The optional features are configured using the "Skeletal App Configuration" section in the sdkconfig, and include:
+The optional features are configured using the "SKELAPP Configuration" section in the sdkconfig, and include:
 
 ### RGB LED
 
@@ -34,11 +34,11 @@ Adds support for BLE peripheral functionality, so that an external BLE central c
 
 ### WiFi Station
 
-Adds support for WiFi station, so that the ESP32 device can connect to a WiFi network to get Internet connectivity.
+Adds support for WiFi station, so that the ESP32 device can connect to a WiFi network to get Internet connectivity. The credentials to join the WiFi network can be provisioned manually or obtained directly from the WiFi router via WPS.
 
 ### Web Server
 
-Adds support for a basic HTTP web server.
+Adds support for a basic HTTP web server, that can be used to serve documents to a remote client.
 
 ### OTA Update
 
@@ -120,14 +120,46 @@ idf.py menuconfig
  
 7. Add your own app's code to the appMainTask() in myNewApp/main/app.c.  This task runs a simple infinite work loop, with the period specified by the config attribute MAIN_TASK_WAKEUP_PERIOD. Of course you are free to replace this simple periodic work loop, for something more advanced, such as an event-driven work loop that can process different events posted by timers, interrupts, callback's, etc.
 
-```c
-typedef struct AppInfo {
-    TaskHandle_t taskHandle;
-    // TBD
-} AppInfo;
+The data used by the app is stored in the AppData structure defined in myNewApp/main/app.h:
 
+```c
+// App's data
+typedef struct AppData {
+    AppPersData persData;   // saved to (restored from) NVM
+    const char *buildType;
+    const esp_app_desc_t *appDesc;
+    struct timeval baseTime;
+    TickType_t baseTicks;
+    uint8_t serialNumber[4];
+
+    uint8_t wifiMac[6];     // WiFi MAC address
+    int8_t wifiRssi;        // WiFi RSSI value [in dBm]
+    uint8_t wifiPriChan;    // WiFi primary channel
+    uint32_t wifiIpAddr;    // DHCP assigned IP address
+    uint32_t wifiGwAddr;    // WiFi router IP address
+
+#ifdef CONFIG_APP_MAIN_TASK
+    TaskHandle_t appMainTaskHandle;
+#if CONFIG_APP_MAIN_TASK_WAKEUP_METHOD_ESP_TIMER
+    esp_timer_handle_t wakeupTimerHandle;
+#endif
+#ifdef CONFIG_MAIN_TASK_TIME_WORK_LOOP
+    uint64_t workLoopCount;
+    uint64_t sumWorkLoopTime;
+    uint64_t minWorkLoopTime;
+    uint64_t maxWorkLoopTime;
+    uint64_t avgWorkLoopTime;
+#endif
+#endif
+
+    // Add your custom app data below
+
+} AppData;
+```
+
+```c
 // Custom app initialization
-static int appCustInit(AppInfo *appInfo)
+static int appCustInit(AppData *appData)
 {
     // TBD
     return 0;
@@ -135,16 +167,17 @@ static int appCustInit(AppInfo *appInfo)
 
 // This is the app's main task. It runs an infinite work
 // loop, trying its best to keep a constant wake up interval.
+#if CONFIG_APP_MAIN_TASK_WAKEUP_METHOD_TASK_DELAY
 void appMainTask(void *parms)
 {
-    AppInfo appInfo = {0};
+    AppData *appData = parms;
     const TickType_t wakeupPeriodTicks = pdMS_TO_TICKS(CONFIG_MAIN_TASK_WAKEUP_PERIOD);
 
-    appInfo.taskHandle = xTaskGetCurrentTaskHandle();
+    appData->appMainTaskHandle = xTaskGetCurrentTaskHandle();
 
     // Do any custom app initialization before
     // entering the infinite work loop.
-    if (appCustInit(&appInfo) != 0) {
+    if (appCustInit(appData) != 0) {
         mlog(fatal, "Custom app initialization failed!");
     }
 
@@ -178,17 +211,18 @@ void appMainTask(void *parms)
 ```
 
 > [!NOTE]
-> If your app needs to store any data in non-volatile storage, you can extend **SkelApp**'s AppConfigInfo structure, defined in myNewApp/main/app.h.  AppConfigInfo is stored in the NVM partition of the flash memory, and is loaded early on during app start up.
+> If your app needs to store any data in non-volatile memory (NVM), you can extend **SkelApp**'s AppPersData structure, defined in myNewApp/main/app.h.  AppPersData is stored in the NVM partition of the flash memory, and is automatically loaded into memory when the app starts up.
 
 ```c
-// App configuration info
-typedef struct AppConfigInfo {
-    WiFiConfigInfo wifiConfigInfo;
-    int8_t utcOffset;
+// App's persistent data
+typedef struct AppPersData {
+    char wifiSsid[64];      // SSID string
+    char wifiPasswd[64];    // Password string
+    int8_t utcOffset;       // UTC offset (in hours)
 
-    // Custom app config goes here
+    // Add your custom app persistent data below
 
-} AppConfigInfo;
+} AppPersData;
 ```
 
 # BLE Peripheral Feature
