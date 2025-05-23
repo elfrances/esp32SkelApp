@@ -241,13 +241,21 @@ menu "SKELAPP Configuration"
             When enabled the firmware includes WiFi station functionality
             to allow the device to connect to the Internet.
     
-    config WPS
+    menuconfig WPS
         bool "WiFi Protected Setup (WPS)"
         depends on WIFI_STATION
         default y
         help
             Adds support for WiFi Protected Setup (WPS) to auto configure the 
             WiFi credentials using the WiFi router.
+                
+    config WPS_RETRIES
+        int "WPS Retries"
+        depends on WPS
+        default 2
+        help
+            The number of times WPS will retry before giving up. Each try timeouts
+            after 2 minutes.
                 
     config WIFI_SSID
         string "WiFi SSID"

@@ -1,3 +1,5 @@
+#include "sdkconfig.h"
+
 #include "app.h"
 #include "ble.h"
 #include "esp32.h"

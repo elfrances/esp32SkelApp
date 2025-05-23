@@ -4,15 +4,6 @@
 
 #include "app.h"
 
-// WiFi connection info
-typedef struct WiFiConnInfo {
-    uint8_t wifiMac[6];     // WiFi MAC address
-    int8_t rssi;            // WiFi RSSI value [in dBm]
-    uint8_t priChan;        // WiFi primary channel
-    uint32_t wifiIpAddr;    // DHCP assigned IP address (in network byte order)
-    uint32_t wifiGwAddr;    // WiFi router IP address (in network byte order)
-} WiFiConnInfo;
-
 __BEGIN_DECLS
 
 extern int wifiInit(AppData *appData);

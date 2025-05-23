@@ -12,7 +12,7 @@ typedef struct AppPersData {
     char wifiPasswd[64];    // Password string
     int8_t utcOffset;       // UTC offset (in hours)
 
-    // Custom app persistent data goes below
+    // Add your custom app persistent data below
 
 } AppPersData;
 
@@ -45,7 +45,7 @@ typedef struct AppData {
 #endif
 #endif
 
-    // Custom app data goes below
+    // Add your custom app data below
 
 } AppData;
 
