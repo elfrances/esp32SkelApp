@@ -59,8 +59,10 @@ Creates a FAT file system using the 'storage' partition in the flash memory.
 > | File | Target Device | LED | MLOG | BLE | WiFi | OTA | FAT |
 > | --- | --- | --- | --- | --- | --- | --- | --- |
 > | sdkconfig.esp32c3.basic | ESP32-C3 DevKit-C02 | x | x | x | x |   |   |
+> | sdkconfig.esp32c3.fat | ESP32-C3 DevKit-C02 | x | x | x | x |   | x |
 > | sdkconfig.esp32c3.ota+fat | ESP32-C3 DevKit-C02 | x | x | x | x | x | x |
 > | sdkconfig.esp32S3.basic | ESP32-S3 DevKit-C1 | x | x | x | x |   |   |
+> | sdkconfig.esp32c3.fat | ESP32-S3 DevKit-C1 | x | x | x | x |   | x |
 > | sdkconfig.esp32S3.ota+fat | ESP32-S3 DevKit-C1 | x | x | x | x | x | x |
 
 > [!TIP]
@@ -105,10 +107,10 @@ idf.py build
 idf.py flash -p /dev/ttyUSB0
 ```
 
-6. Run the ESP-IDF menuconfig command and select the desired options in the "Skeletal App Configuration" section, which comes right after the "Partition Table" setting:
+6. Run the ESP-IDF menuconfig command and select the desired options in the "SKELAPP Configuration" section, which comes right after the "Partition Table" setting:
 
 > [!IMPORTANT]
-> Some of the settings in the "Skeletal App Configuration" section depend on ESP-IDF "Component config" settings. For example, you won't be able to enable the SkelApp's BLE Peripheral setting unless the Bluetooth feature is enabled.
+> Some of the settings in the "SKELAPP Configuration" section depend on ESP-IDF "Component config" settings. For example, you won't be able to enable the SkelApp's BLE Peripheral setting unless the Bluetooth feature is enabled.
 >
 > If your app will not use OTA to update the firmware, then you can regain significant flash memory space by eliminating the OTA partitions in the myNewApp/partitions.csv file.
 >
