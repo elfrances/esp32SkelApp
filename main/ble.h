@@ -19,6 +19,8 @@
 // characteristic.
 typedef struct DevOperStatus {
     uint8_t sysUpTime[4];       // UINT32: System Up Time [in seconds]
+    uint8_t utcOffset;          // INT8: UTC Offset [in hours from GMT]
+    uint8_t wifiEnabled;        // UINT8: WiFi Enabled
     uint8_t wifiStaIpAddr[4];   // UINT32: WiFi Station IPv4 Address
     uint8_t wifiApIpAddr[4];    // UINT32: WiFi Access Point IPv4 Address
     uint8_t wifiStaMacAddr[6];  // UINT8[6]: WiFi Station MAC Address
@@ -29,7 +31,16 @@ typedef struct DevOperStatus {
     uint8_t freeHeapMem[2];     // UINT16: Free Heap Memory [in KB]
     uint8_t maxHeapMemBlk[2];   // UINT16: Max Heap Memory Block [in KB]
     uint8_t freeFatFsSpace[2];  // UINT16: Free FAT FS Space [in kB]
+    uint8_t msgLogLevel;        // UINT8: Message Logging Level
+    uint8_t msgLogDest;         // UINT8: Message Logging Destination
+    uint8_t flags[2];           // UINT16: Miscellaneous Flags (see below)
 } DevOperStatus;
+
+// Miscellaneous Flags
+typedef enum OperStatusFlags {
+    osfFlag0 = 0x0001,
+    osfFlag15 = 0x8000
+} OperStatusFlags;
 
 // Command Op Code
 typedef enum CmdOpCode {

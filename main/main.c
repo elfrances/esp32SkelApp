@@ -258,30 +258,33 @@ void app_main(void)
         mlog(fatal, "wifiInit!");
     }
 
-    // Attempt to connect to the WiFi network
-    if (wifiConnect(&appData) != 0) {
-        mlog(fatal, "wifiInit!");
-    }
-
-    if (appData.wifiIpAddr != 0) {
-        // Save the WiFi credentials
-        if (nvramWrite(&appData.persData) != 0) {
-            mlog(fatal, "Can't save app's config info!");
+    // If WiFi is not disabled, attempt to
+    // connect to the WiFi network.
+    if (!appData.persData.wifiDisabled) {
+        if (wifiConnect(&appData) != 0) {
+            mlog(fatal, "wifiInit!");
         }
+
+        if (appData.wifiIpAddr != 0) {
+            // Save the WiFi credentials
+            if (nvramWrite(&appData.persData) != 0) {
+                mlog(fatal, "Can't save app's config info!");
+            }
 
 #if CONFIG_WIFI_NTP
-        // Set the current date and time.
-        if (sntpInit(&appData) != 0) {
-            mlog(warning, "Failed to set date and time!");
-        }
+            // Set the current date and time.
+            if (sntpInit(&appData) != 0) {
+                mlog(warning, "Failed to set date and time!");
+            }
 #endif
 
 #ifdef CONFIG_WEB_SERVER
-        // Init the HTTP Web Server
-        if (httpsInit() != 0) {
-            mlog(fatal, "Failed to init HTTP Server!");
-        }
+            // Init the HTTP Web Server
+            if (httpsInit() != 0) {
+                mlog(fatal, "Failed to init HTTP Server!");
+            }
 #endif
+        }
     }
 #endif  // CONFIG_WIFI_STATION
 

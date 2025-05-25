@@ -40,6 +40,7 @@ extern void msgLog(LogLevel logLevel, const char *funcName, int lineNum, int err
 extern int msgLogInit(AppData *appData, LogLevel defLogLevel, LogDest defLogDest);
 extern LogDest msgLogSetDest(LogDest logDest);
 extern LogLevel msgLogSetLevel(LogLevel logLevel);
+extern LogDest msgLogGetDest(void);
 extern LogLevel msgLogGetLevel(void);
 
 __END_DECLS
