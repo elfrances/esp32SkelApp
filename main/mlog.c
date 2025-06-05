@@ -231,6 +231,11 @@ LogLevel msgLogSetLevel(LogLevel logLevel)
     return prevLogLevel;
 }
 
+LogDest msgLogGetDest(void)
+{
+    return msgLogDest;
+}
+
 LogLevel msgLogGetLevel(void)
 {
     return msgLogLevel;
@@ -249,6 +254,11 @@ LogDest msgLogSetDest(LogDest logDest)
 LogLevel msgLogSetLevel(LogLevel logLevel)
 {
     return none;
+}
+
+LogDest msgLogGetDest(void)
+{
+    return msgLogDest;
 }
 
 LogLevel msgLogGetLevel(void)

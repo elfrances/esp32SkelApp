@@ -183,6 +183,8 @@ static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
 
     uint32_t sysUpTime = pdTICKS_TO_MS(xTaskGetTickCount() - appData->baseTicks) / 1000;
     blePutUINT32(devOperStatus.sysUpTime, sysUpTime);
+    devOperStatus.utcOffset = appData->persData.utcOffset;
+    devOperStatus.wifiEnabled = !appData->persData.wifiDisabled;
     blePutUINT32(devOperStatus.wifiStaIpAddr, appData->wifiIpAddr);
     blePutUINT32(devOperStatus.wifiApIpAddr, appData->wifiGwAddr);
     memcpy(devOperStatus.wifiStaMacAddr, appData->wifiMac, 6);
@@ -199,6 +201,8 @@ static int getDevOperStatus(struct ble_gatt_access_ctxt *ctxt)
         blePutUINT16(devOperStatus.freeFatFsSpace, freeFatFsSpace);
     }
 #endif
+    devOperStatus.msgLogLevel= msgLogGetLevel();
+    devOperStatus.msgLogDest= msgLogGetDest();
 
     return (os_mbuf_append(ctxt->om, &devOperStatus, sizeof (devOperStatus)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }

@@ -11,6 +11,8 @@ typedef struct AppPersData {
     char wifiSsid[64];      // SSID string
     char wifiPasswd[64];    // Password string
     int8_t utcOffset;       // UTC offset (in hours)
+    uint8_t wifiDisabled:1; // WiFi disabled
+    uint8_t unused:7;
 
     // Custom app persistent data goes below
 
