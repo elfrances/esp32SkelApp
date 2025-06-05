@@ -1,3 +1,5 @@
+#include "sdkconfig.h"
+
 #include "esp32.h"
 #include "fgc.h"
 #include "led.h"
@@ -29,7 +31,7 @@ static WpsState wpsState = wpsIdle;
 #ifdef CONFIG_WPS
 static esp_wps_config_t wpsConfig = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
 static wifi_config_t wpsApCredentials[MAX_WPS_AP_CRED];
-static int numApCred = 0;
+static int wpsRetries = 0;
 #endif
 
 static void wifiClearCredentials(AppData *appData)
@@ -146,6 +148,7 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
             esp_wifi_wps_enable(&wpsConfig);
             esp_wifi_wps_start(0);
             wpsState = wpsInProg;
+            wpsRetries = 0;
             mlog(trace, "WPS started ...");
 #endif
         }
@@ -256,8 +259,7 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
             // so there is no need to call esp_wifi_set_config().
         } else {
             // The WiFi AP returned multiple sets of credentials
-            numApCred = evt->ap_cred_cnt;
-            for (int i = 0; i < numApCred; i++) {
+            for (int i = 0; i < evt->ap_cred_cnt; i++) {
                 memcpy(wpsApCredentials[i].sta.ssid, evt->ap_cred[i].ssid, MAX_SSID_LEN);
                 memcpy(wpsApCredentials[i].sta.password, evt->ap_cred[i].passphrase, MAX_PASSPHRASE_LEN);
             }
@@ -284,13 +286,18 @@ static void wifiEvtHandler(void *arg, esp_event_base_t evtBase, int32_t evtId, v
     } else if (evtId == WIFI_EVENT_STA_WPS_ER_FAILED) {
         mlog(error, "WIFI_EVENT_STA_WPS_ER_FAILED");
     } else if (evtId == WIFI_EVENT_STA_WPS_ER_TIMEOUT) {
-        // The WPS process timed out. Restart it to try again.
-        mlog(warning, "WPS timeout: restarting WPS to try again ...");
-        wpsState = wpsIdle;
-        esp_wifi_wps_disable();
-        esp_wifi_wps_enable(&wpsConfig);
-        esp_wifi_wps_start(0);
-        wpsState = wpsInProg;
+        // The WPS process timed out!
+    	if (++wpsRetries < CONFIG_WPS_RETRIES) {
+			mlog(warning, "WPS timeout: restarting WPS to try again ...");
+			wpsState = wpsIdle;
+			esp_wifi_wps_disable();
+			esp_wifi_wps_enable(&wpsConfig);
+			esp_wifi_wps_start(0);
+			wpsState = wpsInProg;
+    	} else {
+    		mlog(warning, "Giving up on WPS!");
+    		vTaskResume(callingTaskHandle);
+    	}
     } else if (evtId == WIFI_EVENT_STA_WPS_ER_PIN) {
         //mlog(trace, "WIFI_EVENT_STA_WPS_ER_PIN");
     } else if (evtId == WIFI_EVENT_STA_WPS_ER_PBC_OVERLAP) {

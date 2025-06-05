@@ -14,7 +14,7 @@ typedef struct AppPersData {
     uint8_t wifiDisabled:1; // WiFi disabled
     uint8_t unused:7;
 
-    // Custom app persistent data goes below
+    // Add your custom app persistent data below
 
 } AppPersData;
 
@@ -47,7 +47,7 @@ typedef struct AppData {
 #endif
 #endif
 
-    // Custom app data goes below
+    // Add your custom app data below
 
 } AppData;
 

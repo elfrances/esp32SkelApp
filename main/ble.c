@@ -1,3 +1,5 @@
+#include "sdkconfig.h"
+
 #include "app.h"
 #include "ble.h"
 #include "esp32.h"
@@ -350,7 +352,13 @@ static int setWiFiStateCmd(struct os_mbuf *om)
 
     enabled = !!om->om_data[1];
 
-    return (wifiEnable(appData, enabled) == 0) ? csSuccess : csFailed;
+    if (wifiEnable(appData, enabled) == 0) {
+        appData->persData.wifiDisabled = !enabled;
+        nvramWrite(&appData->persData);
+        return csSuccess;
+    }
+
+    return csFailed;
 #else
     return csInvOpCode;
 #endif
