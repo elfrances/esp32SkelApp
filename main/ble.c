@@ -83,6 +83,7 @@ typedef struct InbConnInfo {
 
 static InbConnInfo inbConnInfo;
 
+#ifdef CONFIG_DEVICE_INFO_SERVICE
 // Bluetooth SIG Device Info Service
 #define GATT_DEVICE_INFO_SERVICE_UUID       0x180A
 #define GATT_DIS_MANUFACTURER_NAME_UUID         0x2A29  // READ
@@ -116,7 +117,9 @@ static int deviceInfoCb(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
 
     return (os_mbuf_append(ctxt->om, string, strlen(string)) == 0) ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
+#endif  // CONFIG_DEVICE_INFO_SERVICE
 
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE
 // The WiFi Credentials data is a UTF-8 string that
 // includes the SSID and Password strings concatenated
 // using the character sequence "###" as a separator.
@@ -495,9 +498,11 @@ static int deviceConfigCb(uint16_t conn_handle, uint16_t attr_handle, struct ble
 
     return 0;
 }
+#endif  // CONFIG_DEVICE_CONFIG_SERVICE
 
 // Table of supported BLE services and their characteristics
 static const struct ble_gatt_svc_def gattSvcs[] = {
+#ifdef CONFIG_DEVICE_INFO_SERVICE
     {
         // Standard Device Information Service
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
@@ -538,7 +543,9 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
             },
         }
     },
+#endif
 
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE
     {
         // Custom Device Configuration Service
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
@@ -576,6 +583,7 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
             },
         }
     },
+#endif
 
     {
         0,  // No more services
@@ -661,7 +669,7 @@ static int procSubscribeEvent(const struct ble_gap_event *event)
         inbConnInfo.cmdReqIndicate = event->subscribe.cur_indicate;
         mlog(info, "Command Request indications %sabled!", (inbConnInfo.cmdReqIndicate) ? "en" : "dis");
     } else {
-        mlog(warning, "Unsupported attrHandle=%u : cmdReqHandle=%u", attrHandle, inbConnInfo.cmdReqHandle);
+        mlog(warning, "Unsupported attribute handle: connHandle=%u attrHandle=%u", inbConnInfo.connHandle, attrHandle);
     }
 
     return 0;
@@ -786,13 +794,17 @@ static void nimbleAdvertise(void)
         // Device Info Service
         BLE_UUID16_INIT(GATT_DEVICE_INFO_SERVICE_UUID),
 #endif
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE
         // Device Config Service
         BLE_UUID16_INIT(GATT_DEVICE_CONFIG_SERVICE_UUID),
+#endif
     };
 #ifdef CONFIG_DEVICE_INFO_SERVICE
     rspFields.num_uuids16++;
 #endif
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE
     rspFields.num_uuids16++;
+#endif
     rspFields.uuids16_is_complete = true;
 
     if ((rc = ble_gap_adv_rsp_set_fields(&rspFields)) != 0) {
@@ -876,7 +888,11 @@ int bleInit(AppData *appData)
     // Initialize NimBLE peripheral/server configuration
     ble_svc_gap_init();
     ble_svc_gatt_init();
+#ifdef CONFIG_BLE_ADV_NAME_SUFFIX
     snprintf(devName, sizeof (devName), "%s-%02X%02X", CONFIG_BLE_ADV_NAME, appData->serialNumber[2], appData->serialNumber[3]);
+#else
+    snprintf(devName, sizeof (devName), "%s", CONFIG_BLE_ADV_NAME);
+#endif
     ble_svc_gap_device_name_set(devName);
     ble_svc_gap_device_appearance_set(BLE_SVC_GAP_APPEARANCE_GEN_UNKNOWN);
 

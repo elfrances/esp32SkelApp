@@ -174,13 +174,22 @@ menu "SKELAPP Configuration"
             The base name used in the BLE advertisements. The actual name sent
             in the advertisements has the suffix "-NNNN" appended to it, where 
             NNNN are four hex digits derived from the serial number of the device.
+            
+    config BLE_ADV_NAME_SUFFIX
+        bool "BLE Advertised Name Suffix"
+        depends on BLE_PERIPHERAL
+        default y
+        help
+            When enabled the actual name sent in the advertisements has the suffix 
+            "-NNNN" appended to it, where NNNN are four hex digits derived from the
+            serial number of the device.            
 
     menuconfig DEVICE_INFO_SERVICE
         bool "Device Information Service"
         depends on BLE_PERIPHERAL
         default y
         help
-            When enabled the firmware includes the standard Device Information
+            When enabled the firmware includes the standard BLE SIG Device Information
             Service.
                                 
     config MANUFACTURER_NAME
@@ -198,17 +207,25 @@ menu "SKELAPP Configuration"
         help
             The string used as the Model Number in the Device Information
             Service.
-    
+ 
+     menuconfig DEVICE_CONFIG_SERVICE
+        bool "Device Configuration Service"
+        depends on BLE_PERIPHERAL
+        default y
+        help
+            When enabled the firmware includes a custom Device Configuration
+            Service, used to configure and control the device.
+            
     config DEVICE_CONFIG_SERVICE_UUID
         hex "Device Config Service UUID"
-        depends on BLE_PERIPHERAL
+        depends on DEVICE_CONFIG_SERVICE
         default 0xFE00
         help
             The 16-bit UUID to use for the custom Device Configuration Service.         
 
     choice DCS_OPERATING_STATUS_FORMAT
         prompt "Operating Status data format"
-        depends on BLE_PERIPHERAL
+        depends on DEVICE_CONFIG_SERVICE
         default DCS_OPERATING_STATUS_FMT_BINARY
         help
             The format of the Operating Status data.
@@ -221,13 +238,13 @@ menu "SKELAPP Configuration"
     
     config DCS_OPERATING_STATUS_FORMAT
     	int
-    	depends on BLE_PERIPHERAL
+    	depends on DEVICE_CONFIG_SERVICE
         default 0 if DCS_OPERATING_STATUS_FMT_BINARY
         default 1 if DCS_OPERATING_STATUS_FMT_STRING
     
     config DCS_HELP
         bool "Device Config Service Help"
-        depends on BLE_PERIPHERAL
+        depends on DEVICE_CONFIG_SERVICE
         default y
         help
             When enabled the firmware includes built-in help for the custom

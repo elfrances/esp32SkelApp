@@ -7,6 +7,7 @@
 // The following definitions are the external API to be
 // used by apps that want to connect to SkelApp over BLE.
 
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE
 // Custom Device Config Service
 #define GATT_DEVICE_CONFIG_SERVICE_UUID     CONFIG_DEVICE_CONFIG_SERVICE_UUID
 #define GATT_DCS_WIFI_CREDENTIALS_UUID          (CONFIG_DEVICE_CONFIG_SERVICE_UUID+1)   // READ, WRITE
@@ -72,6 +73,7 @@ typedef struct CmdStatus {
     uint8_t opCode;
     uint8_t status;
 } CmdStatus;
+#endif  // CONFIG_DEVICE_CONFIG_SERVICE
 
 __BEGIN_DECLS
 
