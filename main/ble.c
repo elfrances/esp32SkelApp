@@ -74,11 +74,13 @@ uint32_t bleGetUINT32(const uint8_t *data)
 typedef struct InbConnInfo {
     time_t connTime;
     uint16_t connHandle;
-    uint16_t cmdReqHandle;
     bool connEstablished;
-    bool cmdReqIndicate;
     ble_addr_t ourAddr;
     ble_addr_t peerAddr;
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE
+    uint16_t cmdReqHandle;
+    bool cmdReqIndicate;
+#endif
 } InbConnInfo;
 
 static InbConnInfo inbConnInfo;
@@ -630,8 +632,10 @@ static int procDisconnectEvent(const struct ble_gap_event *event)
         inbConnInfo.connTime = 0;
         inbConnInfo.connHandle = 0;
         inbConnInfo.connEstablished = false;
-        inbConnInfo.cmdReqIndicate = false;
         memset(&inbConnInfo.peerAddr, 0, sizeof (inbConnInfo.peerAddr));
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE
+        inbConnInfo.cmdReqIndicate = false;
+#endif
 
         // Start advertising again
         nimbleAdvertise();
@@ -665,9 +669,11 @@ static int procSubscribeEvent(const struct ble_gap_event *event)
         // When the iOS LightBlue mobile app connects, it
         // enables indications on the characteristic with
         // the attribute handle 8, which we don't care...
+#ifdef CONFIG_DEVICE_CONFIG_SERVICE
     } else if (attrHandle == inbConnInfo.cmdReqHandle) {
         inbConnInfo.cmdReqIndicate = event->subscribe.cur_indicate;
         mlog(info, "Command Request indications %sabled!", (inbConnInfo.cmdReqIndicate) ? "en" : "dis");
+#endif
     } else {
         mlog(warning, "Unsupported attribute handle: connHandle=%u attrHandle=%u", inbConnInfo.connHandle, attrHandle);
     }
@@ -747,9 +753,9 @@ static int nimbleGapEventCb(struct ble_gap_event *event, void *arg)
 
 static void nimbleAdvertise(void)
 {
-    struct ble_gap_adv_params advParams = {0};  // ADV_IND
+    struct ble_gap_adv_params advParams = {0};
+    struct ble_hs_adv_fields advFields = {0};   // ADV_IND
     struct ble_hs_adv_fields rspFields = {0};   // SCAN_RSP
-    struct ble_hs_adv_fields advFields = {0};
     const char *devName = ble_svc_gap_device_name();
     int rc;
 
