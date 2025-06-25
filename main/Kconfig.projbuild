@@ -126,46 +126,7 @@ menu "SKELAPP Configuration"
         help
             When enabled the firmware includes BLE peripheral functionality
             to allow a mobile app to connect to the device.
-                
-    config BLE_HOST_TASK_PRIO
-        int "BLE Host Task Priority"
-        depends on BLE_PERIPHERAL
-        range 0 24
-        default 20
-        help
-            The priority of the task that runs the BLE Host stack.
-            The valid range is: 0 to (configMAX_PRIORITIES-1).
-            
-    config BLE_HOST_TASK_STACK
-        int "BLE Host Task Stack Size"
-        depends on BLE_PERIPHERAL
-        range 4096 8192
-        default 4096
-        help
-            The stack size of the BLE Host task.
-            
-    choice BLE_HOST_TASK_CPU
-        prompt "BLE Host Task CPU Affinity"
-        depends on BLE_PERIPHERAL
-        default BLE_HOST_TASK_CPU_NO_AFFINITY
-        help
-            The CPU core of the BLE Host task.
-
-        config BLE_HOST_TASK_CPU_NO_AFFINITY
-            bool "No affinity"
-        config BLE_HOST_TASK_CPU_CORE0
-            bool "CPU0"
-        config BLE_HOST_TASK_CPU_CORE1 
-            bool "CPU1"
-    endchoice
-                
-    config BLE_HOST_TASK_CPU
-        hex
-        depends on BLE_PERIPHERAL
-        default FREERTOS_NO_AFFINITY if BLE_HOST_TASK_CPU_NO_AFFINITY
-        default 0x0 if BLE_HOST_TASK_CPU_CORE0
-        default 0x1 if BLE_HOST_TASK_CPU_CORE1
-                
+                                
     config BLE_ADV_NAME
         string "BLE Advertised Name"
         depends on BLE_PERIPHERAL
@@ -248,8 +209,55 @@ menu "SKELAPP Configuration"
         default y
         help
             When enabled the firmware includes built-in help for the custom
-            Device Configuration Service.            
-    
+            Device Configuration Service.
+            
+    menuconfig BLE_CENTRAL
+    bool "BLE Central"
+    depends on BT_NIMBLE_ENABLED
+    default y
+    help
+        When enabled the firmware includes BLE central functionality
+        to allow it to scan for and connect to external peripheral devices.
+            
+    config BLE_HOST_TASK_PRIO
+        int "BLE Host Task Priority"
+        depends on BLE_PERIPHERAL || BLE_CENTRAL
+        range 0 24
+        default 20
+        help
+            The priority of the task that runs the BLE Host stack.
+            The valid range is: 0 to (configMAX_PRIORITIES-1).
+            
+    config BLE_HOST_TASK_STACK
+        int "BLE Host Task Stack Size"
+        depends on BLE_PERIPHERAL || BLE_CENTRAL
+        range 4096 8192
+        default 4096
+        help
+            The stack size of the BLE Host task.
+            
+    choice BLE_HOST_TASK_CPU
+        prompt "BLE Host Task CPU Affinity"
+        depends on BLE_PERIPHERAL || BLE_CENTRAL
+        default BLE_HOST_TASK_CPU_NO_AFFINITY
+        help
+            The CPU core of the BLE Host task.
+
+        config BLE_HOST_TASK_CPU_NO_AFFINITY
+            bool "No affinity"
+        config BLE_HOST_TASK_CPU_CORE0
+            bool "CPU0"
+        config BLE_HOST_TASK_CPU_CORE1 
+            bool "CPU1"
+    endchoice
+                
+    config BLE_HOST_TASK_CPU
+        hex
+        depends on BLE_PERIPHERAL || BLE_CENTRAL
+        default FREERTOS_NO_AFFINITY if BLE_HOST_TASK_CPU_NO_AFFINITY
+        default 0x0 if BLE_HOST_TASK_CPU_CORE0
+        default 0x1 if BLE_HOST_TASK_CPU_CORE1
+            
     menuconfig WIFI_STATION
         bool "WiFi Station"
         depends on ESP_WIFI_ENABLED

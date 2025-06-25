@@ -241,7 +241,7 @@ void app_main(void)
         mlog(fatal, "Can't read app's config info!");
     }
 
-#ifdef CONFIG_BLE_PERIPHERAL
+#if defined(CONFIG_BLE_PERIPHERAL) || defined(CONFIG_BLE_CENTRAL)
     if (bleInit(&appData) != 0) {
         mlog(fatal, "bleInit!");
     }

@@ -9,14 +9,16 @@
 #include "ota.h"
 #include "wifi.h"
 
-#ifdef CONFIG_BLE_PERIPHERAL
+#if defined(CONFIG_BLE_PERIPHERAL) || defined(CONFIG_BLE_CENTRAL)
 
 // We need to make this pointer file-global because the
 // NimBLE API doesn't support passing it as an argument.
 static AppData *appData;
 
 // Forward declarations
+#ifdef CONFIG_BLE_PERIPHERAL
 static void nimbleAdvertise(void);
+#endif
 
 void blePutUINT16(uint8_t *data, uint16_t value)
 {
@@ -69,7 +71,7 @@ uint32_t bleGetUINT32(const uint8_t *data)
     return value;
 }
 
-
+#ifdef CONFIG_BLE_PERIPHERAL
 // Inbound Connection Information
 typedef struct InbConnInfo {
     time_t connTime;
@@ -591,6 +593,7 @@ static const struct ble_gatt_svc_def gattSvcs[] = {
         0,  // No more services
     },
 };
+#endif  // CONFIG_BLE_PERIPHERAL
 
 // Format a BLE MAC address
 const char *fmtBleMac(const uint8_t *addr)
@@ -607,6 +610,7 @@ static int procConnectEvent(const struct ble_gap_event *event)
         struct ble_gap_conn_desc connDesc = {0};
         ble_gap_conn_find(event->connect.conn_handle, &connDesc);
 
+#ifdef CONFIG_BLE_PERIPHERAL
         // Set up connection state
         inbConnInfo.connTime = time(NULL);
         inbConnInfo.connHandle = event->connect.conn_handle;
@@ -618,6 +622,7 @@ static int procConnectEvent(const struct ble_gap_event *event)
 
         // Let the user know...
         ledSet(on, yellow);
+#endif
     }
 
     return 0;
@@ -625,6 +630,7 @@ static int procConnectEvent(const struct ble_gap_event *event)
 
 static int procDisconnectEvent(const struct ble_gap_event *event)
 {
+#ifdef CONFIG_BLE_PERIPHERAL
     if (event->disconnect.conn.conn_handle == inbConnInfo.connHandle) {
         mlog(info, "Inbound BLE connection dropped: connHandle=%u reason=0x%03x", inbConnInfo.connHandle, event->disconnect.reason);
 
@@ -643,6 +649,7 @@ static int procDisconnectEvent(const struct ble_gap_event *event)
         // Let the user know...
         ledSet(off, black);
     }
+#endif
 
     return 0;
 }
@@ -675,7 +682,7 @@ static int procSubscribeEvent(const struct ble_gap_event *event)
         mlog(info, "Command Request indications %sabled!", (inbConnInfo.cmdReqIndicate) ? "en" : "dis");
 #endif
     } else {
-        mlog(warning, "Unsupported attribute handle: connHandle=%u attrHandle=%u", inbConnInfo.connHandle, attrHandle);
+        mlog(warning, "Unsupported attribute handle: connHandle=%u attrHandle=%u", event->subscribe.conn_handle, attrHandle);
     }
 
     return 0;
@@ -750,7 +757,7 @@ static int nimbleGapEventCb(struct ble_gap_event *event, void *arg)
     return 0;
 }
 
-
+#ifdef CONFIG_BLE_PERIPHERAL
 static void nimbleAdvertise(void)
 {
     struct ble_gap_adv_params advParams = {0};
@@ -828,6 +835,7 @@ static void nimbleAdvertise(void)
 
     mlog(info, "Advertising BLE services as \"%s\" ...", devName);
 }
+#endif  // CONFIG_BLE_PERIPHERAL
 
 static void nimbleOnReset(int reason)
 {
@@ -859,8 +867,10 @@ static void nimbleOnSync(void)
     }
 #endif
 
+#ifdef CONFIG_BLE_PERIPHERAL
     // Start advertising our own services
     nimbleAdvertise();
+#endif
 }
 
 static void nimbleHostTask(void *param)
@@ -880,7 +890,6 @@ static void nimbleHostTask(void *param)
 int bleInit(AppData *appData)
 {
     int rc;
-    char devName[32];
 
     // Initialize controller and NimBLE host stack
     if ((rc = nimble_port_init()) != ESP_OK) {
@@ -891,7 +900,9 @@ int bleInit(AppData *appData)
     ble_hs_cfg.sync_cb = nimbleOnSync;
     ble_hs_cfg.reset_cb = nimbleOnReset;
 
+#ifdef CONFIG_BLE_PERIPHERAL
     // Initialize NimBLE peripheral/server configuration
+    char devName[32];
     ble_svc_gap_init();
     ble_svc_gatt_init();
 #ifdef CONFIG_BLE_ADV_NAME_SUFFIX
@@ -909,6 +920,7 @@ int bleInit(AppData *appData)
     if ((rc = ble_gatts_add_svcs(gattSvcs)) != 0) {
         mlog(fatal, "ble_gatts_add_svcs: rc=%d", rc);
     }
+#endif
 
     // Start the NimBLE Host task
     if ((rc = xTaskCreatePinnedToCore(nimbleHostTask, "bleHostTask", CONFIG_BLE_HOST_TASK_STACK,
@@ -919,4 +931,4 @@ int bleInit(AppData *appData)
     return 0;
 }
 
-#endif  // CONFIG_BLE_PERIPHERAL
+#endif  // CONFIG_BLE_PERIPHERAL || CONFIG_BLE_CENTRAL
